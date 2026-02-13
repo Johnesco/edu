@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SQL Course — Interactive SQL Tutorial</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header id="app-header">
+        <button id="sidebar-toggle" aria-label="Toggle sidebar">&#9776;</button>
+        <h1>SQL Course</h1>
+        <div id="header-right">
+            <div id="progress-bar-container">
+                <div id="progress-bar"></div>
+                <span id="progress-text">0 / 15</span>
+            </div>
+            <button id="reset-btn" title="Reset all progress">Reset</button>
+        </div>
+    </header>
+
+    <div id="app-container">
+        <nav id="sidebar">
+            <ul id="lesson-list"></ul>
+        </nav>
+
+        <main id="main-content">
+            <!-- Welcome screen (shown when no lesson selected) -->
+            <section id="welcome-screen">
+                <h2>Welcome to SQL Course</h2>
+                <p>Learn SQL interactively with a real database engine running right in your browser. No setup needed.</p>
+                <div id="welcome-features">
+                    <div class="feature-card">
+                        <div class="feature-icon">&#128187;</div>
+                        <h3>Real SQL Engine</h3>
+                        <p>Run actual SQL queries against SQLite — no server, no installs.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">&#127922;</div>
+                        <h3>Fun Datasets</h3>
+                        <p>Each lesson uses a unique themed dataset — space, RPGs, music, and more.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">&#128221;</div>
+                        <h3>Tests &amp; Exercises</h3>
+                        <p>Practice with guided exercises and take randomized tests to prove your skills.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">&#128190;</div>
+                        <h3>Progress Saved</h3>
+                        <p>Your progress is saved locally. Pick up right where you left off.</p>
+                    </div>
+                </div>
+                <button id="start-btn" class="btn-primary">Start Lesson 1</button>
+            </section>
+
+            <!-- Lesson view (hidden until a lesson is selected) -->
+            <section id="lesson-view" class="hidden">
+                <div id="lesson-header">
+                    <span id="lesson-number"></span>
+                    <h2 id="lesson-title"></h2>
+                    <span id="lesson-theme"></span>
+                </div>
+
+                <!-- Tab navigation -->
+                <div id="lesson-tabs">
+                    <button class="tab active" data-tab="tutorial">Tutorial</button>
+                    <button class="tab" data-tab="sandbox">Sandbox</button>
+                    <button class="tab" data-tab="exercises">Exercises</button>
+                    <button class="tab" data-tab="test">Test</button>
+                </div>
+
+                <!-- Tutorial tab -->
+                <div id="tab-tutorial" class="tab-content active">
+                    <div id="tutorial-content"></div>
+                    <button id="tutorial-next" class="btn-primary">Try it in the Sandbox &rarr;</button>
+                </div>
+
+                <!-- Sandbox tab -->
+                <div id="tab-sandbox" class="tab-content">
+                    <div id="sandbox-info">
+                        <p>Experiment freely with the <strong id="sandbox-dataset-name"></strong> dataset. Your queries won't affect exercises or tests.</p>
+                        <button id="schema-toggle" class="btn-secondary">Show Schema</button>
+                    </div>
+                    <div id="schema-display" class="hidden">
+                        <pre id="schema-text"></pre>
+                    </div>
+                    <div class="editor-container">
+                        <label for="sandbox-editor">SQL Query:</label>
+                        <textarea id="sandbox-editor" class="sql-editor" spellcheck="false" placeholder="Type your SQL query here..."></textarea>
+                        <div class="editor-actions">
+                            <button id="sandbox-run" class="btn-primary">Run &#9654;</button>
+                            <button id="sandbox-clear" class="btn-secondary">Clear</button>
+                        </div>
+                    </div>
+                    <div id="sandbox-results" class="results-area">
+                        <p class="results-placeholder">Run a query to see results here.</p>
+                    </div>
+                </div>
+
+                <!-- Exercises tab -->
+                <div id="tab-exercises" class="tab-content">
+                    <div id="exercises-progress">
+                        <span id="exercises-done">0</span> / <span id="exercises-total">0</span> exercises completed
+                    </div>
+                    <div id="exercises-list"></div>
+                </div>
+
+                <!-- Test tab -->
+                <div id="tab-test" class="tab-content">
+                    <div id="test-intro">
+                        <h3>Lesson Test</h3>
+                        <p>5 randomized questions. Each retake generates new questions!</p>
+                        <div id="test-best-score" class="hidden">Best score: <span id="best-score-value"></span>/5</div>
+                        <button id="test-start" class="btn-primary">Start Test</button>
+                    </div>
+                    <div id="test-active" class="hidden">
+                        <div id="test-progress-bar">
+                            <span id="test-question-num"></span>
+                        </div>
+                        <div id="test-question-area"></div>
+                    </div>
+                    <div id="test-results" class="hidden">
+                        <h3 id="test-score-heading"></h3>
+                        <p id="test-score-detail"></p>
+                        <div id="test-review"></div>
+                        <div id="test-actions">
+                            <button id="test-retake" class="btn-primary">Retake Test</button>
+                            <button id="test-next-lesson" class="btn-secondary">Next Lesson &rarr;</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Lesson navigation -->
+                <div id="lesson-nav">
+                    <button id="prev-lesson" class="btn-secondary">&larr; Previous</button>
+                    <button id="next-lesson" class="btn-secondary">Next &rarr;</button>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Confirmation dialog -->
+    <div id="confirm-dialog" class="hidden">
+        <div class="dialog-overlay"></div>
+        <div class="dialog-box">
+            <h3 id="confirm-title">Confirm</h3>
+            <p id="confirm-message"></p>
+            <div class="dialog-actions">
+                <button id="confirm-cancel" class="btn-secondary">Cancel</button>
+                <button id="confirm-ok" class="btn-primary">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast notification -->
+    <div id="toast" class="hidden"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/sql-wasm.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

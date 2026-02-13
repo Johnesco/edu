@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fun Learning</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1a1a2e;
+            color: #e0e0e0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        header {
+            text-align: center;
+            padding: 3rem 1rem 2rem;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            color: #e94560;
+        }
+
+        header p {
+            margin-top: 0.75rem;
+            font-size: 1.1rem;
+            color: #a0a0b8;
+            max-width: 540px;
+        }
+
+        .apps {
+            width: 100%;
+            max-width: 720px;
+            padding: 1rem;
+            flex: 1;
+        }
+
+        .apps h2 {
+            font-size: 1.3rem;
+            color: #0f3460;
+            background: #e94560;
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 4px;
+            margin-bottom: 1rem;
+        }
+
+        .apps ul {
+            list-style: none;
+        }
+
+        .apps li {
+            background: #16213e;
+            margin-bottom: 0.5rem;
+            padding: 0.75rem 1rem;
+            border-radius: 6px;
+            border-left: 3px solid #e94560;
+        }
+
+        .apps a {
+            color: #53c0f0;
+            text-decoration: none;
+        }
+
+        .apps a:hover {
+            text-decoration: underline;
+        }
+
+        footer {
+            text-align: center;
+            padding: 2rem 1rem;
+            font-size: 0.9rem;
+            color: #6a6a80;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Fun Learning</h1>
+        <p>A collection of small interactive apps for learning things the fun way. Poke around and see what clicks.</p>
+    </header>
+
+    <section class="apps">
+        <h2>Apps</h2>
+        <ul>
+            <li><a href="sql/">SQL Course</a> — Interactive SQL tutorial</li>
+        </ul>
+    </section>
+
+    <footer>
+        <p>Spot something wrong? Reach me at letmeshowyou [at] gmail [dot] com</p>
+    </footer>
+</body>
+</html>
