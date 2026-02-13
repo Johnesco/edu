@@ -16,9 +16,9 @@ let testState = null;
 
 const defaultProgress = () => ({
     currentLesson: 0,
-    completed: new Array(15).fill(false),
-    bestScores: new Array(15).fill(0),
-    exercisesDone: Array.from({ length: 15 }, () => [])
+    completed: new Array(20).fill(false),
+    bestScores: new Array(20).fill(0),
+    exercisesDone: Array.from({ length: 20 }, () => [])
 });
 
 let progress = defaultProgress();
@@ -30,9 +30,9 @@ function loadProgress() {
             const p = JSON.parse(raw);
             progress = { ...defaultProgress(), ...p };
             // ensure arrays are right length
-            while (progress.completed.length < 15) progress.completed.push(false);
-            while (progress.bestScores.length < 15) progress.bestScores.push(0);
-            while (progress.exercisesDone.length < 15) progress.exercisesDone.push([]);
+            while (progress.completed.length < 20) progress.completed.push(false);
+            while (progress.bestScores.length < 20) progress.bestScores.push(0);
+            while (progress.exercisesDone.length < 20) progress.exercisesDone.push([]);
         }
     } catch (e) { progress = defaultProgress(); }
 }
@@ -157,8 +157,8 @@ function renderSidebar() {
 
 function updateProgressBar() {
     const done = progress.completed.filter(Boolean).length;
-    $('progress-bar').style.width = `${(done / 15) * 100}%`;
-    $('progress-text').textContent = `${done} / 15`;
+    $('progress-bar').style.width = `${(done / 20) * 100}%`;
+    $('progress-text').textContent = `${done} / 20`;
 }
 
 function showWelcome() {
@@ -179,7 +179,7 @@ function loadLesson(id) {
     $('lesson-view').classList.remove('hidden');
 
     // Header
-    $('lesson-number').textContent = `Lesson ${lesson.id} of 15`;
+    $('lesson-number').textContent = `Lesson ${lesson.id} of 20`;
     $('lesson-title').textContent = lesson.title;
     $('lesson-theme').textContent = lesson.theme;
 
@@ -201,7 +201,7 @@ function loadLesson(id) {
 
     // Nav buttons
     $('prev-lesson').style.visibility = lesson.id > 1 ? 'visible' : 'hidden';
-    $('next-lesson').style.visibility = lesson.id < 15 ? 'visible' : 'hidden';
+    $('next-lesson').style.visibility = lesson.id < 20 ? 'visible' : 'hidden';
 
     // Default to tutorial tab
     switchTab('tutorial');
@@ -598,7 +598,7 @@ function bindEvents() {
     $('test-start').addEventListener('click', startTest);
     $('test-retake').addEventListener('click', startTest);
     $('test-next-lesson').addEventListener('click', () => {
-        if (currentLesson && currentLesson.id < 15) loadLesson(currentLesson.id + 1);
+        if (currentLesson && currentLesson.id < 20) loadLesson(currentLesson.id + 1);
     });
 
     // Lesson nav
@@ -606,7 +606,7 @@ function bindEvents() {
         if (currentLesson && currentLesson.id > 1) loadLesson(currentLesson.id - 1);
     });
     $('next-lesson').addEventListener('click', () => {
-        if (currentLesson && currentLesson.id < 15) loadLesson(currentLesson.id + 1);
+        if (currentLesson && currentLesson.id < 20) loadLesson(currentLesson.id + 1);
     });
 }
 
@@ -1150,6 +1150,255 @@ INSERT INTO quotes VALUES (1,'Captain Rex','I have a feeling this mission will b
         () => ({ type:'mcq', question:'What does <code>_</code> match in a LIKE pattern?', options:['Exactly one character','Any number of characters','Only letters','Nothing (literal underscore)'], answer:0 }),
         () => ({ type:'fix', question:'Fix this query:', broken:"SELECT * FROM quotes WHERE quote LIKE 'never';", solution:"SELECT * FROM quotes WHERE quote LIKE '%never%';" }),
         () => ({ type:'fix', question:'Fix this query:', broken:"SELECT character_name + quote FROM quotes;", solution:"SELECT character_name || quote FROM quotes;" }),
+    ]
+},
+
+// --- Lesson 16: CASE Expressions & NULL Handling (Weather Stations) ---
+{
+    id: 16,
+    title: 'CASE Expressions & NULL Handling',
+    theme: 'Weather Stations \u2014 sensors, readings, missing data',
+    tutorial: `<h3>CASE Expressions</h3>
+<p>The <code>CASE</code> expression lets you add conditional logic to your queries \u2014 like if/else in programming:</p>
+<div class="sql-example">SELECT station, temp_c,
+  CASE
+    WHEN temp_c < 10 THEN 'Cold'
+    WHEN temp_c < 25 THEN 'Warm'
+    ELSE 'Hot'
+  END AS temp_label
+FROM readings;</div>
+<p>Each <code>WHEN</code> is checked in order. The first match wins. <code>ELSE</code> is the fallback (if omitted, unmatched rows get NULL).</p>
+<h3>Working with NULL</h3>
+<p>NULL means "unknown" or "missing". It is <strong>not</strong> zero or an empty string. You cannot use <code>= NULL</code>; instead use <code>IS NULL</code> or <code>IS NOT NULL</code>:</p>
+<div class="sql-example">SELECT * FROM readings WHERE humidity IS NULL;</div>
+<h3>COALESCE &amp; NULLIF</h3>
+<p><code>COALESCE(a, b, ...)</code> returns the first non-NULL value:</p>
+<div class="sql-example">SELECT station, COALESCE(wind_speed, 0) AS wind FROM readings;</div>
+<p><code>NULLIF(a, b)</code> returns NULL if <code>a = b</code>, otherwise returns <code>a</code>. Useful for turning sentinel values into NULL:</p>
+<div class="sql-example">SELECT station, NULLIF(condition, 'Unknown') AS cond FROM readings;</div>
+<div class="note">Any arithmetic with NULL produces NULL: <code>5 + NULL = NULL</code>. Any comparison with NULL (using =, <, >) returns NULL (not TRUE or FALSE).</div>`,
+    schema: `CREATE TABLE readings (id INT, station TEXT, date TEXT, temp_c REAL, humidity INT, wind_speed REAL, condition TEXT);
+INSERT INTO readings VALUES (1,'Alpine Summit','2024-01-15',-8.2,45,12.5,'Snow'),(2,'Alpine Summit','2024-02-10',-3.1,NULL,8.0,'Cloudy'),(3,'Desert Flats','2024-01-15',32.7,12,NULL,'Clear'),(4,'Desert Flats','2024-02-10',35.4,8,5.2,'Clear'),(5,'Coastal Bay','2024-01-15',18.3,78,22.1,'Rain'),(6,'Coastal Bay','2024-02-10',20.5,82,NULL,'Cloudy'),(7,'Forest Ridge','2024-01-15',5.0,65,3.4,'Fog'),(8,'Forest Ridge','2024-02-10',NULL,NULL,NULL,'Unknown'),(9,'Urban Central','2024-01-15',12.8,55,7.6,'Clear'),(10,'Urban Central','2024-02-10',15.2,60,9.1,'Cloudy'),(11,'Alpine Summit','2024-03-05',2.0,50,15.3,'Snow'),(12,'Desert Flats','2024-03-05',38.9,5,4.0,'Clear'),(13,'Coastal Bay','2024-03-05',NULL,75,18.7,'Rain'),(14,'Forest Ridge','2024-03-05',8.4,62,NULL,'Unknown'),(15,'Urban Central','2024-03-05',18.0,48,6.2,'Clear');`,
+    schemaDisplay: 'readings(id INT, station TEXT, date TEXT, temp_c REAL, humidity INT, wind_speed REAL, condition TEXT)',
+    defaultQuery: 'SELECT * FROM readings;',
+    exercises: [
+        { instruction: "Use CASE to label each reading's temp_c as 'Cold' (below 10), 'Warm' (10 to 25), or 'Hot' (above 25). Show station, temp_c, and the label as temp_label. Exclude rows where temp_c IS NULL.", hint: "CASE WHEN temp_c < 10 THEN 'Cold' WHEN temp_c <= 25 THEN 'Warm' ELSE 'Hot' END AS temp_label", solution: "SELECT station, temp_c, CASE WHEN temp_c < 10 THEN 'Cold' WHEN temp_c <= 25 THEN 'Warm' ELSE 'Hot' END AS temp_label FROM readings WHERE temp_c IS NOT NULL" },
+        { instruction: "Find all readings where humidity is missing (NULL). Show station and date.", hint: "Use IS NULL", solution: "SELECT station, date FROM readings WHERE humidity IS NULL" },
+        { instruction: "Select station, date, and wind_speed but replace NULL wind_speed values with 0. Alias the result as wind.", hint: "Use COALESCE(wind_speed, 0)", solution: "SELECT station, date, COALESCE(wind_speed, 0) AS wind FROM readings" },
+        { instruction: "Select station and condition, but return NULL when condition is 'Unknown'. Alias the result as cond.", hint: "Use NULLIF(condition, 'Unknown')", solution: "SELECT station, NULLIF(condition, 'Unknown') AS cond FROM readings" }
+    ],
+    tests: [
+        () => { const thresh = pick([10,15,20]); return { type:'write', question:`Use CASE to label temp_c: below ${thresh} is 'Cold', ${thresh} and above is 'Warm'. Show station, temp_c, and the label as temp_label. Exclude NULL temp_c.`, solution:`SELECT station, temp_c, CASE WHEN temp_c < ${thresh} THEN 'Cold' ELSE 'Warm' END AS temp_label FROM readings WHERE temp_c IS NOT NULL` }; },
+        () => { const col = pick(['humidity','wind_speed']); return { type:'write', question:`Find all readings where ${col} IS NULL. Show station and date.`, solution:`SELECT station, date FROM readings WHERE ${col} IS NULL` }; },
+        () => { const col = pick(['wind_speed','humidity']); const def = col === 'wind_speed' ? '0' : '0'; return { type:'write', question:`Select station, date, and ${col} but replace NULL values with ${def} using COALESCE. Alias the result as filled.`, solution:`SELECT station, date, COALESCE(${col}, ${def}) AS filled FROM readings` }; },
+        () => ({ type:'mcq', question:'What is the correct way to check for NULL values in SQL?', options:['IS NULL','= NULL','== NULL','EQUALS NULL'], answer:0 }),
+        () => ({ type:'mcq', question:'What does COALESCE(NULL, NULL, 5, 3) return?', options:['5','NULL','3','0'], answer:0 }),
+        () => ({ type:'mcq', question:'What does NULLIF(10, 10) return?', options:['NULL','10','0','An error'], answer:0 }),
+        () => ({ type:'fix', question:'Fix this CASE expression:', broken:"SELECT station, CASE WHEN temp_c < 10 'Cold' WHEN temp_c < 25 'Warm' ELSE 'Hot' END AS label FROM readings;", solution:"SELECT station, CASE WHEN temp_c < 10 THEN 'Cold' WHEN temp_c < 25 THEN 'Warm' ELSE 'Hot' END AS label FROM readings;" }),
+    ]
+},
+
+// --- Lesson 17: UNION & Set Operations (E-commerce) ---
+{
+    id: 17,
+    title: 'UNION & Set Operations',
+    theme: 'E-commerce \u2014 online and store orders',
+    tutorial: `<h3>Combining Results with UNION</h3>
+<p>Set operations combine the results of two or more <code>SELECT</code> statements.</p>
+<p><code>UNION ALL</code> stacks all rows (keeps duplicates):</p>
+<div class="sql-example">SELECT customer, product FROM online_orders
+UNION ALL
+SELECT customer, product FROM store_orders;</div>
+<p><code>UNION</code> removes duplicate rows from the combined result:</p>
+<div class="sql-example">SELECT customer FROM online_orders
+UNION
+SELECT customer FROM store_orders;</div>
+<h3>INTERSECT &amp; EXCEPT</h3>
+<p><code>INTERSECT</code> returns only rows that appear in <strong>both</strong> queries:</p>
+<div class="sql-example">SELECT product FROM online_orders
+INTERSECT
+SELECT product FROM store_orders;</div>
+<p><code>EXCEPT</code> returns rows from the first query that are <strong>not</strong> in the second:</p>
+<div class="sql-example">SELECT product FROM online_orders
+EXCEPT
+SELECT product FROM store_orders;</div>
+<div class="note">All set operations require the same number of columns with compatible types in both SELECT statements. Column names come from the first query.</div>`,
+    schema: `CREATE TABLE online_orders (id INT, customer TEXT, product TEXT, amount REAL, order_date TEXT);
+CREATE TABLE store_orders (id INT, customer TEXT, product TEXT, amount REAL, order_date TEXT);
+INSERT INTO online_orders VALUES (1,'Alice','Laptop',999.99,'2024-01-10'),(2,'Bob','Headphones',79.99,'2024-01-12'),(3,'Carol','Keyboard',49.99,'2024-01-15'),(4,'Alice','Mouse',29.99,'2024-01-18'),(5,'Dave','Monitor',349.99,'2024-01-20'),(6,'Eve','Laptop',999.99,'2024-02-01'),(7,'Frank','Tablet',449.99,'2024-02-05'),(8,'Bob','Webcam',89.99,'2024-02-10');
+INSERT INTO store_orders VALUES (1,'Grace','Laptop',1049.99,'2024-01-11'),(2,'Hank','Mouse',34.99,'2024-01-13'),(3,'Alice','Keyboard',54.99,'2024-01-16'),(4,'Ivan','Headphones',84.99,'2024-01-19'),(5,'Carol','Printer',199.99,'2024-01-22'),(6,'Jack','Monitor',379.99,'2024-02-02'),(7,'Grace','Tablet',479.99,'2024-02-06'),(8,'Hank','Desk Lamp',45.99,'2024-02-12');`,
+    schemaDisplay: 'online_orders(id INT, customer TEXT, product TEXT, amount REAL, order_date TEXT)\nstore_orders(id INT, customer TEXT, product TEXT, amount REAL, order_date TEXT)',
+    defaultQuery: 'SELECT * FROM online_orders;\n-- SELECT * FROM store_orders;',
+    exercises: [
+        { instruction: "Combine all orders from both tables using UNION ALL. Select customer, product, and amount from each.", hint: "SELECT customer, product, amount FROM online_orders UNION ALL SELECT customer, product, amount FROM store_orders", solution: "SELECT customer, product, amount FROM online_orders UNION ALL SELECT customer, product, amount FROM store_orders" },
+        { instruction: "Get a list of all distinct customer names from both tables using UNION.", hint: "SELECT customer FROM ... UNION SELECT customer FROM ...", solution: "SELECT customer FROM online_orders UNION SELECT customer FROM store_orders" },
+        { instruction: "Find products that were sold in both channels using INTERSECT.", hint: "SELECT product FROM ... INTERSECT SELECT product FROM ...", solution: "SELECT product FROM online_orders INTERSECT SELECT product FROM store_orders" },
+        { instruction: "Find products sold online but NOT in store using EXCEPT.", hint: "SELECT product FROM online_orders EXCEPT SELECT product FROM store_orders", solution: "SELECT product FROM online_orders EXCEPT SELECT product FROM store_orders" }
+    ],
+    tests: [
+        () => { const cols = pick(['customer, product','customer, product, amount']); return { type:'write', question:`Combine all rows from online_orders and store_orders using UNION ALL. Select ${cols}.`, solution:`SELECT ${cols} FROM online_orders UNION ALL SELECT ${cols} FROM store_orders` }; },
+        () => { const col = pick(['customer','product']); return { type:'write', question:`Get all distinct ${col} values from both tables using UNION.`, solution:`SELECT ${col} FROM online_orders UNION SELECT ${col} FROM store_orders` }; },
+        () => ({ type:'write', question:'Find products that appear in both online_orders and store_orders using INTERSECT.', solution:'SELECT product FROM online_orders INTERSECT SELECT product FROM store_orders' }),
+        () => ({ type:'mcq', question:'What is the difference between UNION and UNION ALL?', options:['UNION removes duplicates, UNION ALL keeps them','UNION ALL removes duplicates, UNION keeps them','UNION is faster','There is no difference'], answer:0 }),
+        () => ({ type:'mcq', question:'What must be true about the two SELECTs in a UNION?', options:['Same number of columns with compatible types','Same table names','Same WHERE clauses','Same number of rows'], answer:0 }),
+        () => ({ type:'fix', question:'Fix this UNION (mismatched columns):', broken:"SELECT customer, product FROM online_orders UNION SELECT customer FROM store_orders;", solution:"SELECT customer, product FROM online_orders UNION SELECT customer, product FROM store_orders;" }),
+        () => ({ type:'mcq', question:'What does EXCEPT return?', options:['Rows in the first query but not in the second','Rows in both queries','Rows in neither query','All rows minus duplicates'], answer:0 }),
+    ]
+},
+
+// --- Lesson 18: Common Table Expressions (CTEs) (Social Media) ---
+{
+    id: 18,
+    title: 'Common Table Expressions (CTEs)',
+    theme: 'Social Media \u2014 users, posts, follows',
+    tutorial: `<h3>What is a CTE?</h3>
+<p>A <strong>Common Table Expression</strong> (CTE) is a named temporary result set defined with <code>WITH...AS</code>. Think of it as a named subquery you can reference like a table:</p>
+<div class="sql-example">WITH active_users AS (
+  SELECT user_id, COUNT(*) AS post_count
+  FROM posts
+  GROUP BY user_id
+  HAVING COUNT(*) >= 3
+)
+SELECT u.username, a.post_count
+FROM active_users a
+JOIN users u ON u.id = a.user_id;</div>
+<h3>Why CTEs?</h3>
+<p>CTEs make complex queries more readable by breaking them into logical steps. Compare the CTE above with a nested subquery \u2014 the CTE version reads top-to-bottom.</p>
+<h3>Multiple CTEs</h3>
+<p>You can define multiple CTEs separated by commas:</p>
+<div class="sql-example">WITH post_stats AS (
+  SELECT user_id, COUNT(*) AS posts
+  FROM posts GROUP BY user_id
+),
+follower_stats AS (
+  SELECT following_id AS user_id, COUNT(*) AS followers
+  FROM follows GROUP BY following_id
+)
+SELECT u.username, COALESCE(p.posts,0) AS posts, COALESCE(f.followers,0) AS followers
+FROM users u
+LEFT JOIN post_stats p ON u.id = p.user_id
+LEFT JOIN follower_stats f ON u.id = f.user_id;</div>
+<div class="note">CTEs exist only for the duration of the query. They are not stored anywhere. Each CTE can reference previously defined CTEs in the same WITH clause.</div>`,
+    schema: `CREATE TABLE users (id INT, username TEXT, join_date TEXT);
+CREATE TABLE posts (id INT, user_id INT, content TEXT, created_date TEXT, likes_count INT);
+CREATE TABLE follows (follower_id INT, following_id INT);
+INSERT INTO users VALUES (1,'alice_dev','2023-01-15'),(2,'bob_photo','2023-03-22'),(3,'carol_writes','2023-02-10'),(4,'dave_music','2023-06-01'),(5,'eve_travels','2023-04-18'),(6,'frank_cooks','2023-07-30');
+INSERT INTO posts VALUES (1,1,'Just shipped a new feature!','2024-01-10',45),(2,1,'Debugging at midnight again','2024-01-15',32),(3,1,'Code review tips thread','2024-02-01',78),(4,2,'Sunset at the beach','2024-01-12',120),(5,2,'New camera lens review','2024-01-20',95),(6,3,'My top 10 books of 2024','2024-01-18',67),(7,3,'Writing productivity hacks','2024-02-05',53),(8,3,'Short story draft','2024-02-12',41),(9,3,'Poetry collection update','2024-02-20',29),(10,4,'New album dropping soon','2024-01-25',88),(11,5,'Hiking in Patagonia','2024-02-01',110),(12,5,'Travel budget tips','2024-02-10',72);
+INSERT INTO follows VALUES (1,2),(1,3),(2,1),(2,3),(3,1),(3,2),(3,4),(4,1),(4,5),(5,1),(5,2),(5,3),(6,1),(6,2),(6,3),(6,4),(6,5);`,
+    schemaDisplay: 'users(id INT, username TEXT, join_date TEXT)\nposts(id INT, user_id INT, content TEXT, created_date TEXT, likes_count INT)\nfollows(follower_id INT, following_id INT)',
+    defaultQuery: 'SELECT * FROM users;\n-- SELECT * FROM posts;\n-- SELECT * FROM follows;',
+    exercises: [
+        { instruction: "Write a CTE named 'prolific' that finds user_ids with more than 2 posts. Then select the username and post count by joining with the users table.", hint: "WITH prolific AS (SELECT user_id, COUNT(*) AS post_count FROM posts GROUP BY user_id HAVING COUNT(*) > 2)", solution: "WITH prolific AS (SELECT user_id, COUNT(*) AS post_count FROM posts GROUP BY user_id HAVING COUNT(*) > 2) SELECT u.username, p.post_count FROM prolific p JOIN users u ON u.id = p.user_id" },
+        { instruction: "Write a CTE named 'avg_likes' that calculates each user's average likes_count. Then select users whose average is above the overall average likes. Show username and avg_likes.", hint: "First CTE gets AVG(likes_count) per user_id, then compare to (SELECT AVG(likes_count) FROM posts)", solution: "WITH avg_likes AS (SELECT user_id, AVG(likes_count) AS avg_likes FROM posts GROUP BY user_id) SELECT u.username, a.avg_likes FROM avg_likes a JOIN users u ON u.id = a.user_id WHERE a.avg_likes > (SELECT AVG(likes_count) FROM posts)" },
+        { instruction: "Use two CTEs: 'post_counts' (count posts per user_id) and 'follower_counts' (count followers per following_id). Then join both with users to show username, posts, and followers.", hint: "WITH post_counts AS (...), follower_counts AS (...) SELECT ...", solution: "WITH post_counts AS (SELECT user_id, COUNT(*) AS posts FROM posts GROUP BY user_id), follower_counts AS (SELECT following_id AS user_id, COUNT(*) AS followers FROM follows GROUP BY following_id) SELECT u.username, COALESCE(p.posts, 0) AS posts, COALESCE(f.followers, 0) AS followers FROM users u LEFT JOIN post_counts p ON u.id = p.user_id LEFT JOIN follower_counts f ON u.id = f.user_id" }
+    ],
+    tests: [
+        () => { const n = pick([1,2,3]); return { type:'write', question:`Write a CTE named 'active' that finds user_ids with more than ${n} posts. Then select username and post count by joining with users.`, solution:`WITH active AS (SELECT user_id, COUNT(*) AS post_count FROM posts GROUP BY user_id HAVING COUNT(*) > ${n}) SELECT u.username, a.post_count FROM active a JOIN users u ON u.id = a.user_id` }; },
+        () => { const n = pick([50,60,70]); return { type:'write', question:`Write a CTE named 'popular' that finds posts with likes_count > ${n}. Then select the username and content by joining with users.`, solution:`WITH popular AS (SELECT * FROM posts WHERE likes_count > ${n}) SELECT u.username, p.content FROM popular p JOIN users u ON u.id = p.user_id` }; },
+        () => ({ type:'write', question:'Write a CTE named "follower_counts" that counts followers per user (following_id). Then select username and follower count, joining with users.', solution:'WITH follower_counts AS (SELECT following_id AS user_id, COUNT(*) AS followers FROM follows GROUP BY following_id) SELECT u.username, f.followers FROM follower_counts f JOIN users u ON u.id = f.user_id' }),
+        () => ({ type:'mcq', question:'What does CTE stand for?', options:['Common Table Expression','Computed Table Entity','Conditional Table Expression','Cascaded Table Extension'], answer:0 }),
+        () => ({ type:'mcq', question:'How long does a CTE exist?', options:['Only for the duration of the single query','Until the session ends','Permanently like a table','Until explicitly dropped'], answer:0 }),
+        () => ({ type:'fix', question:'Fix this CTE (missing AS keyword):', broken:"WITH active (SELECT user_id, COUNT(*) AS cnt FROM posts GROUP BY user_id) SELECT * FROM active;", solution:"WITH active AS (SELECT user_id, COUNT(*) AS cnt FROM posts GROUP BY user_id) SELECT * FROM active;" }),
+        () => ({ type:'fix', question:'Fix this CTE (wrong reference):', broken:"WITH post_stats AS (SELECT user_id, COUNT(*) AS cnt FROM posts GROUP BY user_id) SELECT * FROM posts_stats;", solution:"WITH post_stats AS (SELECT user_id, COUNT(*) AS cnt FROM posts GROUP BY user_id) SELECT * FROM post_stats;" }),
+    ]
+},
+
+// --- Lesson 19: Window Functions (Sales Analytics) ---
+{
+    id: 19,
+    title: 'Window Functions',
+    theme: 'Sales Analytics \u2014 employees, departments, revenue',
+    tutorial: `<h3>What are Window Functions?</h3>
+<p>Window functions perform calculations across a set of rows <strong>related to the current row</strong>, without collapsing them like GROUP BY does. They use the <code>OVER()</code> clause:</p>
+<div class="sql-example">SELECT employee, department, revenue,
+  SUM(revenue) OVER () AS total_revenue
+FROM sales;</div>
+<h3>PARTITION BY</h3>
+<p><code>PARTITION BY</code> divides rows into groups (partitions). The window function is applied within each partition:</p>
+<div class="sql-example">SELECT employee, department, revenue,
+  SUM(revenue) OVER (PARTITION BY department) AS dept_total
+FROM sales;</div>
+<h3>Ranking Functions</h3>
+<p><code>ROW_NUMBER()</code> \u2014 unique sequential number<br>
+<code>RANK()</code> \u2014 same rank for ties, gaps after<br>
+<code>DENSE_RANK()</code> \u2014 same rank for ties, no gaps</p>
+<div class="sql-example">SELECT employee, department, revenue,
+  RANK() OVER (PARTITION BY department ORDER BY revenue DESC) AS dept_rank
+FROM sales;</div>
+<h3>Running Totals &amp; LAG/LEAD</h3>
+<p>Add <code>ORDER BY</code> inside <code>OVER()</code> to create running totals:</p>
+<div class="sql-example">SELECT employee, month, revenue,
+  SUM(revenue) OVER (PARTITION BY employee ORDER BY month) AS running_total
+FROM sales;</div>
+<p><code>LAG(col, n)</code> accesses a previous row, <code>LEAD(col, n)</code> accesses a following row:</p>
+<div class="sql-example">SELECT employee, month, revenue,
+  LAG(revenue, 1) OVER (PARTITION BY employee ORDER BY month) AS prev_month
+FROM sales;</div>
+<div class="note">Window functions do NOT reduce the number of rows. Every original row is preserved in the output, with extra calculated columns.</div>`,
+    schema: `CREATE TABLE sales (id INT, employee TEXT, department TEXT, month TEXT, revenue INT, units_sold INT);
+INSERT INTO sales VALUES (1,'Alice','Engineering','2024-01',15000,120),(2,'Alice','Engineering','2024-02',18000,145),(3,'Alice','Engineering','2024-03',16500,130),(4,'Bob','Engineering','2024-01',12000,95),(5,'Bob','Engineering','2024-02',14000,110),(6,'Bob','Engineering','2024-03',13500,105),(7,'Carol','Marketing','2024-01',9000,70),(8,'Carol','Marketing','2024-02',11000,88),(9,'Carol','Marketing','2024-03',10500,82),(10,'Dave','Marketing','2024-01',8500,65),(11,'Dave','Marketing','2024-02',9500,75),(12,'Dave','Marketing','2024-03',12000,95),(13,'Eve','Sales','2024-01',20000,160),(14,'Eve','Sales','2024-02',22000,175),(15,'Eve','Sales','2024-03',19000,150),(16,'Frank','Sales','2024-01',17000,135),(17,'Frank','Sales','2024-02',15500,125),(18,'Frank','Sales','2024-03',18500,148);`,
+    schemaDisplay: 'sales(id INT, employee TEXT, department TEXT, month TEXT, revenue INT, units_sold INT)',
+    defaultQuery: 'SELECT * FROM sales;',
+    exercises: [
+        { instruction: "Rank employees by revenue within each department (highest first). Show employee, department, revenue, and the rank as dept_rank.", hint: "RANK() OVER (PARTITION BY department ORDER BY revenue DESC)", solution: "SELECT employee, department, revenue, RANK() OVER (PARTITION BY department ORDER BY revenue DESC) AS dept_rank FROM sales" },
+        { instruction: "Calculate a running total of revenue per employee, ordered by month. Show employee, month, revenue, and the running total as running_total.", hint: "SUM(revenue) OVER (PARTITION BY employee ORDER BY month)", solution: "SELECT employee, month, revenue, SUM(revenue) OVER (PARTITION BY employee ORDER BY month) AS running_total FROM sales" },
+        { instruction: "Use LAG to show each employee's previous month revenue alongside the current. Show employee, month, revenue, and previous revenue as prev_revenue.", hint: "LAG(revenue, 1) OVER (PARTITION BY employee ORDER BY month)", solution: "SELECT employee, month, revenue, LAG(revenue, 1) OVER (PARTITION BY employee ORDER BY month) AS prev_revenue FROM sales" },
+        { instruction: "Assign a ROW_NUMBER() to all sales ordered by revenue DESC. Show employee, revenue, and the number as row_num.", hint: "ROW_NUMBER() OVER (ORDER BY revenue DESC)", solution: "SELECT employee, revenue, ROW_NUMBER() OVER (ORDER BY revenue DESC) AS row_num FROM sales" }
+    ],
+    tests: [
+        () => { const func = pick(['RANK()','DENSE_RANK()']); const dept = pick(['Engineering','Marketing','Sales']); return { type:'write', question:`Use ${func} to rank employees by revenue (DESC) within the '${dept}' department. Show employee, revenue, and the rank as rnk. Filter to department = '${dept}'.`, solution:`SELECT employee, revenue, ${func} OVER (ORDER BY revenue DESC) AS rnk FROM sales WHERE department = '${dept}'` }; },
+        () => { const col = pick(['revenue','units_sold']); return { type:'write', question:`Calculate a running total of ${col} per employee ordered by month. Show employee, month, ${col}, and the running total as running_total.`, solution:`SELECT employee, month, ${col}, SUM(${col}) OVER (PARTITION BY employee ORDER BY month) AS running_total FROM sales` }; },
+        () => ({ type:'write', question:'Use LAG to show each employee\'s previous month revenue. Show employee, month, revenue, and the lagged value as prev_revenue.', solution:'SELECT employee, month, revenue, LAG(revenue, 1) OVER (PARTITION BY employee ORDER BY month) AS prev_revenue FROM sales' }),
+        () => ({ type:'mcq', question:'What is the difference between RANK() and DENSE_RANK()?', options:['RANK leaves gaps after ties, DENSE_RANK does not','DENSE_RANK leaves gaps after ties, RANK does not','They are identical','RANK only works with PARTITION BY'], answer:0 }),
+        () => ({ type:'mcq', question:'What does PARTITION BY do in a window function?', options:['Divides rows into groups for the function to operate on','Filters rows from the result','Sorts the final output','Limits the number of rows returned'], answer:0 }),
+        () => ({ type:'fix', question:'Fix this window function (missing OVER clause):', broken:"SELECT employee, revenue, RANK() AS rnk FROM sales;", solution:"SELECT employee, revenue, RANK() OVER (ORDER BY revenue DESC) AS rnk FROM sales;" }),
+        () => ({ type:'fix', question:'Fix this window function (wrong ORDER BY placement):', broken:"SELECT employee, month, revenue, SUM(revenue) OVER (PARTITION BY employee) AS rt FROM sales ORDER BY month;", solution:"SELECT employee, month, revenue, SUM(revenue) OVER (PARTITION BY employee ORDER BY month) AS rt FROM sales;" }),
+    ]
+},
+
+// --- Lesson 20: BETWEEN, IN & Column Aliases (Travel / Flights) ---
+{
+    id: 20,
+    title: 'BETWEEN, IN & Column Aliases',
+    theme: 'Travel \u2014 flights, prices, destinations',
+    tutorial: `<h3>BETWEEN</h3>
+<p><code>BETWEEN</code> checks if a value falls within an inclusive range:</p>
+<div class="sql-example">SELECT * FROM flights WHERE price BETWEEN 200 AND 500;</div>
+<p>This is equivalent to <code>price >= 200 AND price <= 500</code>. Use <code>NOT BETWEEN</code> for the inverse.</p>
+<h3>IN</h3>
+<p><code>IN</code> checks if a value matches any item in a list:</p>
+<div class="sql-example">SELECT * FROM flights WHERE destination IN ('Tokyo', 'Paris', 'London');</div>
+<p>Much cleaner than chaining <code>OR</code> conditions. Use <code>NOT IN</code> to exclude values.</p>
+<h3>Column Aliases with AS</h3>
+<p><code>AS</code> gives a column or expression a custom name in the output:</p>
+<div class="sql-example">SELECT airline, price, duration_min,
+  ROUND(1.0 * price / duration_min, 2) AS price_per_minute
+FROM flights;</div>
+<p>Aliases make calculated columns readable. They can also be used on tables in JOINs.</p>
+<h3>Combining Operators</h3>
+<p>You can combine BETWEEN, IN, and other conditions freely:</p>
+<div class="sql-example">SELECT airline, destination, price FROM flights
+WHERE destination IN ('Tokyo', 'Paris')
+  AND price BETWEEN 300 AND 800;</div>
+<div class="note">BETWEEN is inclusive on both ends: <code>BETWEEN 5 AND 10</code> includes 5 and 10. Works with numbers, text, and dates.</div>`,
+    schema: `CREATE TABLE flights (id INT, airline TEXT, origin TEXT, destination TEXT, price INT, duration_min INT, departure_date TEXT, stops INT);
+INSERT INTO flights VALUES (1,'SkyAir','New York','London',450,420,'2024-06-15',0),(2,'OceanWings','New York','Tokyo',850,840,'2024-06-16',1),(3,'EuroJet','New York','Paris',520,480,'2024-06-15',0),(4,'SkyAir','Chicago','London',380,450,'2024-06-17',0),(5,'PacificLine','Los Angeles','Tokyo',780,720,'2024-06-18',0),(6,'EuroJet','Chicago','Paris',490,510,'2024-06-19',1),(7,'SkyAir','New York','Berlin',610,540,'2024-06-20',1),(8,'OceanWings','Los Angeles','Sydney',1200,1020,'2024-06-21',1),(9,'PacificLine','Chicago','Tokyo',920,900,'2024-06-22',2),(10,'EuroJet','New York','London',420,430,'2024-06-23',0),(11,'SkyAir','Los Angeles','Paris',680,660,'2024-06-24',1),(12,'OceanWings','New York','Sydney',1350,1080,'2024-06-25',2),(13,'PacificLine','Chicago','Berlin',590,570,'2024-06-26',1),(14,'SkyAir','Los Angeles','London',510,600,'2024-06-27',1),(15,'EuroJet','Chicago','Sydney',1150,1050,'2024-06-28',2);`,
+    schemaDisplay: 'flights(id INT, airline TEXT, origin TEXT, destination TEXT, price INT, duration_min INT, departure_date TEXT, stops INT)',
+    defaultQuery: 'SELECT * FROM flights;',
+    exercises: [
+        { instruction: "Find all flights with a price BETWEEN 200 AND 500. Show airline, destination, and price.", hint: "WHERE price BETWEEN 200 AND 500", solution: "SELECT airline, destination, price FROM flights WHERE price BETWEEN 200 AND 500" },
+        { instruction: "Find flights to Tokyo, Paris, or London using IN. Show airline, destination, and price.", hint: "WHERE destination IN ('Tokyo','Paris','London')", solution: "SELECT airline, destination, price FROM flights WHERE destination IN ('Tokyo','Paris','London')" },
+        { instruction: "Calculate the price per minute for each flight (price / duration_min), rounded to 2 decimal places. Alias it as price_per_min. Show airline, destination, and price_per_min.", hint: "ROUND(1.0 * price / duration_min, 2) AS price_per_min", solution: "SELECT airline, destination, ROUND(1.0 * price / duration_min, 2) AS price_per_min FROM flights" },
+        { instruction: "Find flights to destinations IN ('Tokyo','Paris') with a price BETWEEN 400 AND 800. Show airline, destination, and price.", hint: "Combine IN and BETWEEN in the WHERE clause", solution: "SELECT airline, destination, price FROM flights WHERE destination IN ('Tokyo','Paris') AND price BETWEEN 400 AND 800" }
+    ],
+    tests: [
+        () => { const lo = pick([200,300,400]); const hi = pick([600,700,800]); return { type:'write', question:`Find flights with price BETWEEN ${lo} AND ${hi}. Show airline, destination, and price.`, solution:`SELECT airline, destination, price FROM flights WHERE price BETWEEN ${lo} AND ${hi}` }; },
+        () => { const dests = pick([['Tokyo','London'],['Paris','Berlin'],['Sydney','Tokyo'],['London','Paris','Berlin']]); const inList = dests.map(d => `'${d}'`).join(','); return { type:'write', question:`Find flights to destinations IN (${inList}). Show airline, destination, and price.`, solution:`SELECT airline, destination, price FROM flights WHERE destination IN (${inList})` }; },
+        () => { const stops = pick([0,1]); return { type:'write', question:`Find flights with ${stops} stops and price BETWEEN 400 AND 900. Show airline, destination, price, and stops.`, solution:`SELECT airline, destination, price, stops FROM flights WHERE stops = ${stops} AND price BETWEEN 400 AND 900` }; },
+        () => ({ type:'mcq', question:'Is BETWEEN inclusive or exclusive of the boundary values?', options:['Inclusive on both ends','Exclusive on both ends','Inclusive start, exclusive end','Exclusive start, inclusive end'], answer:0 }),
+        () => ({ type:'mcq', question:'What does the AS keyword do in a SELECT?', options:['Creates an alias (custom name) for a column or expression','Filters results','Joins tables','Sorts output'], answer:0 }),
+        () => ({ type:'fix', question:'Fix this BETWEEN (wrong syntax):', broken:"SELECT * FROM flights WHERE price BETWEEN 200, 500;", solution:"SELECT * FROM flights WHERE price BETWEEN 200 AND 500;" }),
+        () => ({ type:'fix', question:'Fix this IN clause (missing quotes around strings):', broken:"SELECT * FROM flights WHERE destination IN (Tokyo, Paris, London);", solution:"SELECT * FROM flights WHERE destination IN ('Tokyo', 'Paris', 'London');" }),
     ]
 }
 ];
