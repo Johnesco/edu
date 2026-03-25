@@ -1,0 +1,1225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Interval Ear Training</title>
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: #0a0a1e;
+    color: #c8c8e8;
+    min-height: 100vh;
+    overflow-x: hidden;
+    -webkit-tap-highlight-color: transparent;
+}
+
+#app { width: 100%; min-height: 100vh; }
+
+.screen {
+    display: none; flex-direction: column; align-items: center;
+    max-width: 640px; margin: 0 auto; padding: 20px;
+    min-height: 100vh; justify-content: center; gap: 16px;
+    animation: fadeIn 0.35s ease;
+}
+.screen.active { display: flex; }
+#screen-game.active { justify-content: flex-start; padding-top: 14px; }
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+h1 {
+    font-size: 1.8em; text-align: center; letter-spacing: 1px;
+    background: linear-gradient(90deg, #8888ff, #cc66aa, #8888ff);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+h2 { font-size: 1.4em; color: #aaaadd; text-align: center; }
+.subtitle { color: #666699; font-size: 0.95em; text-align: center; line-height: 1.6; }
+
+button {
+    background: #2a2a60; color: #c8c8e8; border: 1px solid #3a3a80;
+    padding: 12px 24px; border-radius: 8px; font-size: 1em;
+    cursor: pointer; transition: all 0.15s; font-family: inherit;
+    touch-action: manipulation; position: relative;
+}
+button:hover:not(:disabled) { background: #3a3a70; border-color: #5050a0; }
+button:active:not(:disabled) { transform: scale(0.97); }
+button:disabled { opacity: 0.35; cursor: default; }
+
+.btn-primary {
+    background: linear-gradient(135deg, #2a5a2a, #3a7a3a);
+    border-color: #4a9a4a; font-size: 1.15em; padding: 14px 32px; border-radius: 30px;
+}
+.btn-primary:hover:not(:disabled) {
+    background: linear-gradient(135deg, #3a6a3a, #4a8a4a);
+    box-shadow: 0 2px 12px rgba(60, 150, 60, 0.3);
+}
+
+/* Options bar */
+.options-bar {
+    display: flex; flex-wrap: wrap; gap: 6px 14px; width: 100%;
+    padding: 8px 0; align-items: center; font-size: 0.8em; color: #8888aa;
+    border-bottom: 1px solid #1a1a3a;
+}
+.opt-label { display: flex; align-items: center; gap: 4px; cursor: pointer; user-select: none; }
+.opt-label input[type="checkbox"] { accent-color: #5050a0; width: 14px; height: 14px; }
+.tone-row { display: flex; gap: 2px; margin-left: auto; }
+.tone-btn {
+    padding: 3px 7px; font-size: 0.92em; border-radius: 10px;
+    background: #1a1a3a; border: 1px solid #2a2a5a; color: #6666aa; cursor: pointer;
+    font-family: inherit; transition: all 0.15s;
+}
+.tone-btn:hover { border-color: #4040a0; color: #9999cc; }
+.tone-btn.sel { background: #2a2a60; border-color: #4040a0; color: #aaaadd; }
+
+.game-header {
+    display: flex; justify-content: space-between; width: 100%;
+    padding: 8px 0 8px; font-size: 0.9em; color: #8888aa;
+}
+.game-header b { color: #aaaadd; }
+
+.progress-bar { width: 100%; height: 4px; background: #1a1a3a; border-radius: 2px; overflow: hidden; }
+.progress-fill { height: 100%; background: linear-gradient(90deg, #4040a0, #6060dd); transition: width 0.3s; }
+
+/* Game body: main + interval column */
+.game-body { display: flex; gap: 12px; width: 100%; flex: 1; min-height: 0; }
+.game-main { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 10px; min-width: 0; }
+
+.play-section { padding: 16px 0; text-align: center; }
+#playing-indicator {
+    color: #66cc66; font-size: 0.9em; margin-top: 10px;
+    animation: pulse 0.8s ease infinite;
+}
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+/* Interval column — simple stack, high to low */
+.interval-col {
+    display: flex; flex-direction: column;
+    gap: 2px; width: 88px; flex-shrink: 0;
+}
+.interval-btn {
+    flex: 1; display: flex; align-items: center; justify-content: center;
+    flex-direction: column; padding: 2px 4px; font-size: 0.78em;
+    border-radius: 5px; line-height: 1.2; min-height: 28px;
+    transition: all 0.15s;
+}
+.interval-btn .abbr { font-weight: bold; font-size: 1.1em; }
+.interval-btn .name { font-size: 0.68em; opacity: 0.55; }
+
+.interval-btn.correct { background: #1a5a1a !important; border-color: #40a040 !important; color: #80ff80 !important; }
+.interval-btn.wrong { background: #5a1a1a !important; border-color: #a04040 !important; color: #ff8080 !important; }
+.interval-btn.reveal { background: #5a4a1a !important; border-color: #a09040 !important; color: #ffdd80 !important; }
+.interval-btn.lit {
+    background: rgba(70,110,220,0.35) !important; border-color: #5070c0 !important;
+    box-shadow: 0 0 10px rgba(80,120,255,0.45); color: #bbccff !important;
+}
+.do-ind {
+    display: flex; align-items: center; justify-content: center; flex-direction: column;
+    padding: 2px 4px; border-radius: 5px; font-size: 0.78em; line-height: 1.2;
+    min-height: 28px; border: 1px dashed #3a3a70; background: #1a1a40;
+    color: #8888bb; cursor: default; transition: all 0.15s; flex-shrink: 0;
+}
+.do-ind .abbr { font-weight: bold; font-size: 1.1em; }
+.do-ind .name { font-size: 0.68em; opacity: 0.55; }
+.do-ind.lit {
+    background: rgba(70,110,220,0.35) !important; border-color: #5070c0 !important;
+    box-shadow: 0 0 10px rgba(80,120,255,0.45); color: #bbccff !important;
+    border-style: solid;
+}
+
+#feedback { width: 100%; text-align: center; padding: 10px 0; }
+#feedback-text { font-size: 1em; margin-bottom: 6px; }
+.fc { color: #66dd66; } .fw { color: #dd6666; }
+#example-info { color: #8888aa; font-size: 0.82em; font-style: italic; margin: 4px 0 8px; }
+#feedback-buttons { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 8px; }
+
+.score-big { font-size: 3.5em; font-weight: bold; margin: 10px 0; }
+.score-pass { color: #66dd66; }
+.score-fail { color: #dd6666; }
+.score-perfect { color: #ffd700; text-shadow: 0 0 20px rgba(255, 215, 0, 0.4); }
+.result-msg { font-size: 1.1em; text-align: center; line-height: 1.6; }
+
+.btn-easter {
+    background: linear-gradient(135deg, #6a3a10, #aa6020);
+    border-color: #cc8030; font-size: 1.1em; padding: 14px 28px;
+    animation: eGlow 2s ease infinite;
+}
+@keyframes eGlow { 0%, 100% { box-shadow: 0 0 5px rgba(255,160,0,0.2); } 50% { box-shadow: 0 0 20px rgba(255,160,0,0.5); } }
+.btn-easter:hover { background: linear-gradient(135deg, #8a4a20, #cc7030); }
+
+#screen-easter { max-width: none; padding: 0; gap: 0; }
+
+#easter-hud {
+    position: fixed; top: 0; left: 0; right: 0;
+    padding: 8px 16px; background: rgba(10,10,30,0.88);
+    backdrop-filter: blur(8px); z-index: 10;
+    display: flex; flex-wrap: wrap; gap: 6px;
+    align-items: center; justify-content: center;
+    border-bottom: 1px solid #22224a; font-size: 0.85em;
+}
+.note-badge {
+    display: inline-block; padding: 3px 10px; border-radius: 4px;
+    font-weight: bold; font-size: 0.95em; transition: all 0.3s;
+}
+.note-badge.captured { border: 1px solid #40a040; background: rgba(40,120,40,0.3); color: #80ff80; }
+.note-badge.uncaptured { border: 1px solid #333; background: rgba(40,40,60,0.3); color: #555; }
+#melody-label { margin-left: auto; color: #8888aa; }
+#game-canvas { display: block; width: 100vw; height: 100vh; cursor: none; touch-action: none; }
+#easter-instructions {
+    position: fixed; bottom: 130px; left: 50%; transform: translateX(-50%);
+    padding: 12px 24px; background: rgba(10,10,30,0.92); border-radius: 12px;
+    border: 1px solid #2a2a5a; font-size: 0.9em; color: #8888bb;
+    z-index: 10; text-align: center; max-width: 90vw;
+    transition: opacity 1s; line-height: 1.6;
+}
+#melody-timeline {
+    position: fixed; bottom: 20px; left: 20px; right: 20px; height: 100px;
+    background: rgba(10,10,30,0.85); border-radius: 4px;
+    border: 1px solid #22224a; z-index: 10;
+    display: flex; align-items: flex-end; gap: 1px; padding: 4px;
+}
+.tl-seg { height: 7px; border-radius: 2px; transition: opacity 0.3s; min-width: 2px; }
+.tl-seg.now { box-shadow: 0 0 6px currentColor, inset 0 0 4px rgba(255,255,255,0.4); }
+#notation-canvas {
+    position: fixed; bottom: 20px; left: 20px;
+    border-radius: 4px; border: 1px solid #22224a; z-index: 10;
+    display: none;
+}
+.btn-back {
+    position: fixed; top: 8px; right: 12px; z-index: 20;
+    padding: 4px 12px; font-size: 0.8em;
+    background: rgba(40,40,80,0.7); border: 1px solid #3a3a6a;
+}
+#victory-overlay {
+    position: fixed; bottom: 140px; left: 50%; transform: translateX(-50%);
+    background: rgba(12,12,35,0.95); border: 1px solid #3a3a7a;
+    border-radius: 16px; padding: 24px 36px;
+    z-index: 30; display: none; flex-direction: column;
+    align-items: center; gap: 12px; animation: fadeIn 1s;
+    backdrop-filter: blur(12px); max-width: 400px;
+}
+#victory-overlay.active { display: flex; }
+#victory-overlay h2 { color: #ffd700; font-size: 1.4em; }
+#victory-overlay p { color: #aaaacc; font-size: 1em; text-align: center; line-height: 1.5; white-space: pre-line; }
+
+@media (max-width: 500px) {
+    .screen { padding: 14px; }
+    h1 { font-size: 1.4em; }
+    .interval-col { width: 68px; }
+    .interval-btn { font-size: 0.72em; min-height: 24px; }
+    .interval-btn .name { font-size: 0.6em; }
+    .game-header { font-size: 0.82em; }
+    .tone-row { margin-left: 0; }
+    .options-bar { font-size: 0.75em; }
+    .tone-btn { padding: 2px 5px; font-size: 0.85em; }
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+    <!-- TITLE -->
+    <div id="screen-title" class="screen active">
+        <h1>Interval Ear Training</h1>
+        <p class="subtitle">
+            Listen to a musical interval, then identify it.<br>
+            10 rounds &mdash; pass with 7 or more correct.<br>
+            3 guesses per round.
+        </p>
+        <button class="btn-primary" id="btn-start">Start Game</button>
+        <p class="subtitle" style="margin-top:24px;font-size:0.78em;max-width:400px">
+            All example melodies are public domain compositions &mdash;
+            Beethoven, Wagner, Chopin, Satie, and traditional folk songs.
+        </p>
+    </div>
+
+    <!-- GAME -->
+    <div id="screen-game" class="screen">
+        <div class="game-header">
+            <span>Round <b id="el-round">1</b> / 10</span>
+            <span>Score: <b id="el-score">0</b></span>
+            <span>Guesses: <b id="el-guesses">3</b></span>
+        </div>
+        <div class="options-bar">
+            <label class="opt-label"><input type="checkbox" id="chk-middlec" checked> Root: C4</label>
+            <label class="opt-label"><input type="checkbox" id="chk-allhalf"> All half steps</label>
+            <div class="tone-row">
+                <button class="tone-btn sel" data-t="piano">Piano</button>
+                <button class="tone-btn" data-t="organ">Organ</button>
+                <button class="tone-btn" data-t="flute">Flute</button>
+                <button class="tone-btn" data-t="strings">Strings</button>
+                <button class="tone-btn" data-t="bell">Bell</button>
+            </div>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" id="el-progress"></div></div>
+        <div class="game-body">
+            <div class="game-main">
+                <div class="play-section">
+                    <button class="btn-primary" id="btn-play">Play Interval</button>
+                    <div id="playing-indicator" style="display:none">Playing...</div>
+                </div>
+                <div id="feedback" style="display:none">
+                    <div id="feedback-text"></div>
+                    <div id="example-info"></div>
+                    <div id="feedback-buttons">
+                        <button id="btn-example" style="display:none">Play Example</button>
+                        <button id="btn-next">Next</button>
+                    </div>
+                </div>
+            </div>
+            <div class="interval-col" id="el-grid">
+                <!-- Built by JS: P8 at top, m2 at bottom -->
+            </div>
+        </div>
+    </div>
+
+    <!-- RESULTS -->
+    <div id="screen-results" class="screen">
+        <h2>Game Over</h2>
+        <div class="score-big" id="el-final-score"></div>
+        <div class="result-msg" id="el-result-msg"></div>
+        <button id="btn-again">Play Again</button>
+        <button id="btn-easter" class="btn-easter" style="display:none">Secret Game Unlocked</button>
+    </div>
+
+    <!-- EASTER EGG -->
+    <div id="screen-easter" class="screen">
+        <div id="easter-hud">
+            <span style="color:#8888aa;margin-right:4px">Notes:</span>
+            <span id="el-badges"></span>
+            <span id="melody-label">Melody: ???</span>
+        </div>
+        <canvas id="game-canvas"></canvas>
+        <div id="melody-timeline"></div>
+        <canvas id="notation-canvas"></canvas>
+        <div id="easter-instructions">
+            A secret melody is playing &mdash; but every note is muted.<br>
+            Chase the floating notes to reveal the melody!<br>
+            <small>Mouse / Touch / Arrow Keys to move<br>
+            Tip: Press S anytime to jump back here</small>
+        </div>
+        <button class="btn-back" id="btn-notation" style="right:70px">Staff</button>
+        <button class="btn-back" id="btn-back">Back</button>
+    </div>
+
+    <!-- VICTORY -->
+    <div id="victory-overlay">
+        <h2 id="victory-title"></h2>
+        <p id="victory-sub"></p>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center">
+            <button id="btn-victory-next">Discover Another</button>
+            <button id="btn-victory-back">Return to Menu</button>
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+'use strict';
+
+/* ============================
+   AUDIO ENGINE (5 tones)
+   ============================ */
+
+var ac = null;
+var curTone = 'piano';
+
+function initAudio() {
+    if (!ac) ac = new (window.AudioContext || window.webkitAudioContext)();
+    if (ac.state === 'suspended') ac.resume();
+}
+
+function noteFreq(name) {
+    var m = name.match(/^([A-G])(#|b)?(\d)$/);
+    if (!m) return 440;
+    var base = {C:0,D:2,E:4,F:5,G:7,A:9,B:11}[m[1]];
+    var idx = base + (m[2]==='#'?1 : m[2]==='b'?-1 : 0);
+    var midi = (parseInt(m[3])+1)*12 + idx;
+    return 440 * Math.pow(2, (midi-69)/12);
+}
+
+function n2m(name) {
+    var m = name.match(/^([A-G])(#|b)?(\d)$/);
+    if (!m) return 60;
+    var base = {C:0,D:2,E:4,F:5,G:7,A:9,B:11}[m[1]];
+    return (parseInt(m[3])+1)*12 + base + (m[2]==='#'?1:m[2]==='b'?-1:0);
+}
+
+function midiFreq(n) { return 440 * Math.pow(2, (n-69)/12); }
+
+function midiName(n) {
+    var names = ['C','C\u266F','D','D\u266F','E','F','F\u266F','G','G\u266F','A','A\u266F','B'];
+    return names[((n%12)+12)%12] + (Math.floor(n/12)-1);
+}
+
+// Envelope helper
+function env(g, start, dur, vol, atkTime) {
+    g.gain.setValueAtTime(0, start);
+    g.gain.linearRampToValueAtTime(vol, start+atkTime);
+    g.gain.setValueAtTime(vol*0.75, start+atkTime+0.005);
+    if (dur > 0.06) g.gain.exponentialRampToValueAtTime(0.001, start+dur);
+    else g.gain.linearRampToValueAtTime(0, start+dur);
+}
+
+function tonePiano(freq, start, dur, vol, dest) {
+    var o1=ac.createOscillator(),o2=ac.createOscillator(),g=ac.createGain();
+    o1.type='triangle'; o1.frequency.value=freq;
+    o2.type='sine'; o2.frequency.value=freq*1.003;
+    var m1=ac.createGain(),m2=ac.createGain();
+    m1.gain.value=0.65; m2.gain.value=0.35;
+    o1.connect(m1);o2.connect(m2);m1.connect(g);m2.connect(g);g.connect(dest);
+    env(g,start,dur,vol,Math.min(0.04,dur*0.1));
+    o1.start(start);o2.start(start);o1.stop(start+dur+0.02);o2.stop(start+dur+0.02);
+}
+
+function toneOrgan(freq, start, dur, vol, dest) {
+    var g=ac.createGain(); g.connect(dest);
+    [1,2,3].forEach(function(h,i){
+        var o=ac.createOscillator(); o.type='sine'; o.frequency.value=freq*h;
+        var mg=ac.createGain(); mg.gain.value=[0.5,0.3,0.15][i];
+        o.connect(mg);mg.connect(g); o.start(start);o.stop(start+dur+0.02);
+    });
+    g.gain.setValueAtTime(0,start);
+    g.gain.linearRampToValueAtTime(vol*0.55,start+0.02);
+    g.gain.setValueAtTime(vol*0.5,start+0.025);
+    g.gain.linearRampToValueAtTime(0,start+dur);
+}
+
+function toneFlute(freq, start, dur, vol, dest) {
+    var o=ac.createOscillator(),g=ac.createGain();
+    o.type='sine';o.frequency.value=freq;
+    o.connect(g);g.connect(dest);
+    env(g,start,dur,vol*0.7,Math.min(0.12,dur*0.25));
+    o.start(start);o.stop(start+dur+0.02);
+}
+
+function toneStrings(freq, start, dur, vol, dest) {
+    var o=ac.createOscillator(),f=ac.createBiquadFilter(),g=ac.createGain();
+    o.type='sawtooth';o.frequency.value=freq;
+    f.type='lowpass';f.frequency.value=freq*3;f.Q.value=0.5;
+    o.connect(f);f.connect(g);g.connect(dest);
+    env(g,start,dur,vol*0.5,Math.min(0.08,dur*0.15));
+    o.start(start);o.stop(start+dur+0.02);
+}
+
+function toneBell(freq, start, dur, vol, dest) {
+    var g=ac.createGain(); g.connect(dest);
+    [1,2.4,5.2].forEach(function(r,i){
+        var o=ac.createOscillator(); o.type='sine'; o.frequency.value=freq*r;
+        var mg=ac.createGain(); mg.gain.value=[0.5,0.25,0.12][i];
+        o.connect(mg);mg.connect(g); o.start(start);o.stop(start+dur+0.02);
+    });
+    g.gain.setValueAtTime(0,start);
+    g.gain.linearRampToValueAtTime(vol*0.5,start+0.01);
+    if(dur>0.05) g.gain.exponentialRampToValueAtTime(0.001,start+dur);
+    else g.gain.linearRampToValueAtTime(0,start+dur);
+}
+
+function tone(freq, start, dur, vol, dest) {
+    if (!ac) return; vol=vol||0.25; dest=dest||ac.destination;
+    ({piano:tonePiano,organ:toneOrgan,flute:toneFlute,strings:toneStrings,bell:toneBell})[curTone](freq,start,dur,vol,dest);
+}
+
+function toneN(name, start, dur, vol, dest) { tone(noteFreq(name), start, dur, vol, dest); }
+
+/* ============================
+   MUSIC DATA
+   ============================ */
+
+var INTERVALS = [
+    {s:1,  a:'m2',  n:'Minor 2nd'},
+    {s:2,  a:'M2',  n:'Major 2nd'},
+    {s:3,  a:'m3',  n:'Minor 3rd'},
+    {s:4,  a:'M3',  n:'Major 3rd'},
+    {s:5,  a:'P4',  n:'Perfect 4th'},
+    {s:6,  a:'TT',  n:'Tritone'},
+    {s:7,  a:'P5',  n:'Perfect 5th'},
+    {s:8,  a:'m6',  n:'Minor 6th'},
+    {s:9,  a:'M6',  n:'Major 6th'},
+    {s:10, a:'m7',  n:'Minor 7th'},
+    {s:11, a:'M7',  n:'Major 7th'},
+    {s:12, a:'P8',  n:'Octave'}
+];
+
+var SOLFEGE = {1:'Ra',2:'Re',3:'Me',4:'Mi',5:'Fa',6:'Fi',7:'Sol',8:'Le',9:'La',10:'Te',11:'Ti',12:"Do'"};
+var DIATONIC = {2:1,4:1,5:1,7:1,9:1,11:1,12:1}; // major scale degrees only
+
+// Extended example tunes — all public domain
+var EX = {};
+EX[1]  = {t:'F\u00FCr Elise', by:'Beethoven (1810)',
+           nn:['E5','D#5','E5','D#5','E5','B4','D5','C5','A4','C4','E4','A4','B4','E4','G#4','B4','C5','E5','D#5','E5'],
+           dd:[.18,.18,.18,.18,.18,.18,.18,.18,.4,.18,.18,.18,.4,.18,.18,.18,.4,.18,.18,.35]};
+EX[2]  = {t:'Fr\u00E8re Jacques', by:'Traditional French',
+           nn:['C4','D4','E4','C4','C4','D4','E4','C4','E4','F4','G4','E4','F4','G4','G4','A4','G4','F4','E4','C4'],
+           dd:[.28,.28,.28,.28,.28,.28,.28,.28,.28,.28,.5,.28,.28,.5,.18,.18,.18,.18,.28,.5]};
+EX[3]  = {t:'Greensleeves', by:'Traditional English (16th c.)',
+           nn:['A4','C5','D5','E5','F5','E5','D5','B4','G4','A4','B4','C5','C5','B4','A4','G#4','A4','B4','G4','E4'],
+           dd:[.35,.55,.22,.5,.22,.42,.32,.5,.55,.22,.42,.55,.22,.42,.32,.5,.55,.22,.5,.7]};
+EX[4]  = {t:'When the Saints Go Marching In', by:'Traditional Spiritual',
+           nn:['C4','E4','F4','G4','C4','E4','F4','G4','C4','E4','F4','G4','E4','C4','E4','D4'],
+           dd:[.28,.28,.28,.72,.28,.28,.28,.72,.28,.28,.28,.38,.28,.28,.28,.72]};
+EX[5]  = {t:'Bridal Chorus', by:'Wagner (1850)',
+           nn:['C4','F4','F4','F4','A4','G4','F4','Bb4','A4','G4','F4','G4','A4','F4'],
+           dd:[.28,.72,.25,.25,.42,.25,.72,.42,.25,.72,.25,.25,.42,.8]};
+EX[6]  = {t:'Tritone Resolution', by:'Traditional Harmony',
+           nn:['B3','F4','C4','E4','Bb3','E4','F4','B3','C4'],
+           dd:[.42,.42,.72,.42,.42,.42,.42,.42,.72]};
+EX[7]  = {t:'Twinkle Twinkle Little Star', by:'Traditional (1761)',
+           nn:['C4','C4','G4','G4','A4','A4','G4','F4','F4','E4','E4','D4','D4','C4','G4','G4','F4','F4','E4','E4','D4'],
+           dd:[.28,.28,.28,.28,.28,.28,.5,.28,.28,.28,.28,.28,.28,.5,.28,.28,.28,.28,.28,.28,.5]};
+EX[8]  = {t:'Marche fun\u00E8bre', by:'Chopin (1839)',
+           nn:['Bb3','Bb3','Bb3','Gb4','F4','Gb4','Db4','Bb3','Bb3','Bb3','Gb4','F4','Gb4','Bb3'],
+           dd:[.3,.18,.3,.42,.25,.42,.25,.52,.3,.18,.3,.42,.25,.42,.65]};
+EX[9]  = {t:'My Bonnie Lies Over the Ocean', by:'Traditional Scottish',
+           nn:['G4','E5','D5','C5','A4','C5','B4','A4','G4','G4','E5','D5','C5','D5','C5','B4','A4','B4'],
+           dd:[.28,.42,.25,.25,.42,.25,.48,.25,.48,.28,.42,.25,.25,.25,.25,.25,.42,.58]};
+EX[10] = {t:'Dominant 7th Arpeggio', by:'',
+           nn:['C4','Bb4','G4','E4','C4','E4','G4','Bb4','C5'],
+           dd:[.3,.3,.3,.3,.45,.3,.3,.3,.5]};
+EX[11] = {t:'Major 7th Arpeggio', by:'',
+           nn:['C4','B4','G4','E4','C4','E4','G4','B4','C5'],
+           dd:[.3,.3,.3,.3,.45,.3,.3,.3,.5]};
+EX[12] = {t:'Octave Leap', by:'',
+           nn:['C4','C5','G4','C5','E4','C5','G4','E4','C4'],
+           dd:[.32,.35,.32,.35,.32,.35,.28,.28,.5]};
+
+// Public domain melody pool for the secret game
+var SECRET = null;
+var PC_COLORS = {};
+var COLOR_POOL = ['#FFD700','#00CED1','#FF69B4','#7CFC00','#FF8C00','#B19CD9','#FF6347','#00FA9A','#E0BBE4','#87CEEB','#F0E68C','#98FB98'];
+
+var MELODY_POOL = [
+  // 1. Ode to Joy — 4/4, quarter=b:1, dotted phrase ends
+  {name:'Ode to Joy', composer:'Beethoven (1824)', bpm:300, mel:[
+    {n:'E4',b:1},{n:'E4',b:1},{n:'F4',b:1},{n:'G4',b:1},
+    {n:'G4',b:1},{n:'F4',b:1},{n:'E4',b:1},{n:'D4',b:1},
+    {n:'C4',b:1},{n:'C4',b:1},{n:'D4',b:1},{n:'E4',b:1},
+    {n:'E4',b:1.5},{n:'D4',b:.5},{n:'D4',b:2},
+    {n:'E4',b:1},{n:'E4',b:1},{n:'F4',b:1},{n:'G4',b:1},
+    {n:'G4',b:1},{n:'F4',b:1},{n:'E4',b:1},{n:'D4',b:1},
+    {n:'C4',b:1},{n:'C4',b:1},{n:'D4',b:1},{n:'E4',b:1},
+    {n:'D4',b:1.5},{n:'C4',b:.5},{n:'C4',b:2}]},
+
+  // 2. Für Elise — 3/8, sixteenth=b:.5, eighth+rest=b:1.5
+  {name:'F\u00FCr Elise', composer:'Beethoven (1810)', bpm:220, mel:[
+    {n:'E5',b:.5},{n:'D#5',b:.5},{n:'E5',b:.5},{n:'D#5',b:.5},
+    {n:'E5',b:.5},{n:'B4',b:.5},{n:'D5',b:.5},{n:'C5',b:.5},
+    {n:'A4',b:1.5},{n:'C4',b:.5},{n:'E4',b:.5},{n:'A4',b:.5},
+    {n:'B4',b:1.5},{n:'E4',b:.5},{n:'G#4',b:.5},{n:'B4',b:.5},
+    {n:'C5',b:1.5},{n:'E5',b:.5},{n:'D#5',b:.5},{n:'E5',b:.5},
+    {n:'D#5',b:.5},{n:'E5',b:.5},{n:'B4',b:.5},{n:'D5',b:.5},
+    {n:'C5',b:.5},{n:'A4',b:2}]},
+
+  // 3. Canon in D — 4/4, half=b:2 first phrase, quarter=b:1 second
+  {name:'Canon in D', composer:'Pachelbel (c.1680)', bpm:280, mel:[
+    {n:'F#5',b:2},{n:'E5',b:2},{n:'D5',b:2},{n:'C#5',b:2},
+    {n:'B4',b:2},{n:'A4',b:2},{n:'B4',b:2},{n:'C#5',b:2},
+    {n:'D5',b:1},{n:'C#5',b:1},{n:'B4',b:1},{n:'A4',b:1},
+    {n:'G4',b:1},{n:'F#4',b:1},{n:'G4',b:1},{n:'A4',b:1},
+    {n:'D4',b:1},{n:'F#4',b:1},{n:'A4',b:1},{n:'G4',b:1},
+    {n:'F#4',b:1},{n:'D4',b:1},{n:'F#4',b:1},{n:'E4',b:1},
+    {n:'D4',b:3}]},
+
+  // 4. Morning Mood — 6/8, three eighths (b:1) then dotted quarter (b:3)
+  {name:'Morning Mood', composer:'Grieg (1875)', bpm:260, mel:[
+    {n:'E4',b:1},{n:'G#4',b:1},{n:'B4',b:1},{n:'E5',b:3},
+    {n:'D#5',b:1},{n:'B4',b:1},{n:'E4',b:1},{n:'G#4',b:1},
+    {n:'B4',b:1},{n:'D#5',b:3},{n:'E5',b:1},{n:'B4',b:1},
+    {n:'G#4',b:1},{n:'E5',b:1},{n:'D#5',b:1},{n:'C#5',b:1},
+    {n:'B4',b:1},{n:'A4',b:1},{n:'G#4',b:1},{n:'F#4',b:1},
+    {n:'E4',b:3}]},
+
+  // 5. Greensleeves — 3/4, quarter=b:1, half=b:2, dotted-quarter=b:1.5
+  {name:'Greensleeves', composer:'Traditional (16th c.)', bpm:280, mel:[
+    {n:'A4',b:1},{n:'C5',b:2},{n:'D5',b:1},
+    {n:'E5',b:1.5},{n:'F5',b:.5},{n:'E5',b:1},
+    {n:'D5',b:2},{n:'B4',b:1},
+    {n:'G4',b:1.5},{n:'A4',b:.5},{n:'B4',b:1},
+    {n:'C5',b:2},{n:'B4',b:1},
+    {n:'A4',b:1.5},{n:'G#4',b:.5},{n:'A4',b:1},
+    {n:'B4',b:2},{n:'G4',b:1},{n:'E4',b:3}]},
+
+  // 6. Minuet in G — 3/4, half=b:2, quarter=b:1, eighth=b:.5
+  {name:'Minuet in G', composer:'Bach/Petzold (1725)', bpm:240, mel:[
+    {n:'D5',b:2},{n:'G4',b:.5},{n:'A4',b:.5},{n:'B4',b:.5},{n:'C5',b:.5},
+    {n:'D5',b:1},{n:'G4',b:1},{n:'G4',b:1},
+    {n:'E5',b:2},{n:'C5',b:.5},{n:'D5',b:.5},
+    {n:'B4',b:2},{n:'A4',b:.5},{n:'G4',b:.5},
+    {n:'F#4',b:1},{n:'G4',b:.5},{n:'A4',b:.5},{n:'B4',b:.5},{n:'G4',b:.5},
+    {n:'A4',b:3}]},
+
+  // 7. Swan Lake — 4/4, half=b:2, quarter=b:1, dotted-quarter=b:1.5
+  {name:'Swan Lake Theme', composer:'Tchaikovsky (1876)', bpm:240, mel:[
+    {n:'B4',b:2},{n:'B4',b:1},{n:'D5',b:1},
+    {n:'C#5',b:1.5},{n:'B4',b:.5},{n:'A4',b:1},{n:'F#4',b:1},
+    {n:'A4',b:1},{n:'B4',b:2},
+    {n:'B4',b:1},{n:'D5',b:1},
+    {n:'F#5',b:1.5},{n:'E5',b:.5},{n:'D5',b:1},{n:'C#5',b:1},
+    {n:'B4',b:1},{n:'A4',b:1},{n:'B4',b:3}]},
+
+  // 8. Brahms Lullaby — 3/4, pickup eighths=b:.5, held E fills measure=b:2
+  {name:'Brahms Lullaby', composer:'Brahms (1868)', bpm:260, mel:[
+    {n:'C4',b:.5},{n:'C4',b:.5},{n:'E4',b:2},
+    {n:'C4',b:.5},{n:'C4',b:.5},{n:'E4',b:2},
+    {n:'G4',b:1},{n:'E4',b:1},{n:'F4',b:1.5},{n:'D4',b:.5},
+    {n:'D4',b:1},{n:'E4',b:1},{n:'F4',b:1.5},
+    {n:'G4',b:1},{n:'C4',b:1},{n:'C4',b:1},
+    {n:'B3',b:1},{n:'A3',b:1},{n:'B3',b:1},
+    {n:'C4',b:1},{n:'D4',b:1},{n:'E4',b:1},
+    {n:'F4',b:1},{n:'D4',b:1},{n:'C4',b:3}]},
+
+  // 9. Scarborough Fair — 3/4, dotted-half=b:3 for held words, quarter=b:1
+  {name:'Scarborough Fair', composer:'Traditional English', bpm:270, mel:[
+    {n:'A4',b:3},{n:'A4',b:1},{n:'E5',b:1},
+    {n:'E5',b:3},{n:'B4',b:1},{n:'C5',b:1.5},{n:'B4',b:.5},
+    {n:'A4',b:3},
+    {n:'C5',b:1},{n:'B4',b:1},{n:'A4',b:1},{n:'G4',b:1},{n:'E4',b:2},
+    {n:'A4',b:3},{n:'A4',b:1},{n:'A4',b:1},{n:'G4',b:1},
+    {n:'E4',b:1},{n:'E4',b:1},{n:'G4',b:1.5},{n:'A4',b:.5},{n:'G4',b:1},
+    {n:'E4',b:2},{n:'D4',b:2}]},
+
+  // 10. Danny Boy — 4/4, dotted-quarter=b:1.5, eighth=b:.5, whole=b:4
+  {name:'Danny Boy', composer:'Traditional Irish', bpm:260, mel:[
+    {n:'C4',b:.5},{n:'E4',b:1.5},{n:'F4',b:.5},{n:'G4',b:2},
+    {n:'A4',b:1.5},{n:'G4',b:.5},{n:'A4',b:1},{n:'C5',b:1},
+    {n:'B4',b:1.5},{n:'A4',b:.5},{n:'G4',b:1},{n:'E4',b:1},
+    {n:'F4',b:1},{n:'G4',b:1},{n:'A4',b:1.5},{n:'F4',b:.5},
+    {n:'E4',b:1},{n:'C4',b:1},{n:'D4',b:2},{n:'C4',b:4}]}
+];
+
+function generateSecret() {
+    var pick = MELODY_POOL[Math.floor(Math.random()*MELODY_POOL.length)];
+    var pcs=[], seen={};
+    pick.mel.forEach(function(m){
+        var p=pc(m.n); if(!seen[p]){seen[p]=true;pcs.push(p);}
+    });
+    PC_COLORS={};
+    pcs.forEach(function(p,i){PC_COLORS[p]=COLOR_POOL[i%COLOR_POOL.length];});
+    return {name:pick.name, composer:pick.composer, bpm:pick.bpm, mel:pick.mel, pcs:pcs};
+}
+
+function pc(name) { var m=name.match(/^([A-G])(#|b)?/); return m[1]+(m[2]||''); }
+function dpc(raw) { return raw.replace('#','\u266F').replace('b','\u266D'); }
+
+/* ============================
+   STATE
+   ============================ */
+
+var curScreen = 'title';
+var notationMode = false;
+var game = { round:0, score:0, total:10, pass:7, guesses:3, over:false, cur:null };
+var egg = {
+    on:false, captured:new Set(), player:{x:300,y:300},
+    notes:[], fx:[], melTO:null, loopStart:0, totalBeats:0,
+    beatDur:0, raf:null, keys:{}, won:false, stars:null, instTO:null
+};
+
+/* ============================
+   INTERVAL GAME
+   ============================ */
+
+function startGame() {
+    initAudio();
+    game.round = 0; game.score = 0;
+    showScreen('game');
+    nextRound();
+}
+
+function nextRound() {
+    if (game.round >= game.total) { showResults(); return; }
+    game.round++;
+    var lockC = document.getElementById('chk-middlec').checked;
+    var showAll = document.getElementById('chk-allhalf').checked;
+    var pool = showAll ? INTERVALS : INTERVALS.filter(function(iv){ return !!DIATONIC[iv.s]; });
+    var pick = pool[Math.floor(Math.random()*pool.length)];
+    var root;
+    if (lockC) {
+        root = 60; // C4
+    } else {
+        var maxR = Math.min(72, 84 - pick.s);
+        root = 48 + Math.floor(Math.random()*(maxR-48+1));
+    }
+    game.cur = {iv:pick, root:root, target:root+pick.s};
+    game.guesses = 3; game.over = false;
+    updateGameUI(true);
+}
+
+function playInterval() {
+    initAudio();
+    var now = ac.currentTime;
+    tone(midiFreq(game.cur.root), now, 0.9, 0.3);
+    tone(midiFreq(game.cur.target), now+1.1, 0.9, 0.3);
+    // Always light Do when root plays (even during guessing)
+    lightDo(0, 900);
+    // Light interval button only after guess resolved
+    if (game.over) {
+        schedLight(game.cur.iv.s, 1100, 850);
+    }
+    var ind = document.getElementById('playing-indicator');
+    ind.style.display = 'block';
+    setTimeout(function(){ ind.style.display='none'; }, 2100);
+}
+
+function doGuess(semi) {
+    if (game.over) return;
+    var correct = semi === game.cur.iv.s;
+    if (correct) {
+        game.score++; game.over = true;
+        markBtn(semi, 'correct');
+        showFeedback(true);
+    } else {
+        game.guesses--;
+        markBtn(semi, 'wrong');
+        if (game.guesses <= 0) {
+            game.over = true;
+            markBtn(game.cur.iv.s, 'reveal');
+            showFeedback(false);
+        }
+    }
+    updateGameUI(false);
+}
+
+function playExample() {
+    var ex = EX[game.cur.iv.s]; if (!ex) return;
+    initAudio();
+    var rootMidi = n2m(ex.nn[0]);
+    var acNow = ac.currentTime;
+    var t = acNow + 0.12;
+    for (var i=0; i<ex.nn.length; i++) {
+        (function(note, dur, playT){
+            toneN(note, playT, dur*0.88, 0.28);
+            if (game.over) {
+                var noteMidi = n2m(note);
+                var raw = Math.abs(noteMidi - rootMidi);
+                var semi = raw % 12;
+                if (semi === 0 && raw > 0) semi = 12;
+                var delay = Math.max(0, (playT - acNow)*1000);
+                setTimeout(function(){
+                    clearLit();
+                    if (semi === 0) lightDo(0, dur*880);
+                    else if (semi >= 1 && semi <= 12) litBtn(semi, dur*880);
+                }, delay);
+            }
+        })(ex.nn[i], ex.dd[i], t);
+        t += ex.dd[i];
+    }
+}
+
+/* ============================
+   BUTTON LIGHTING
+   ============================ */
+
+function litBtn(semi, durMs) {
+    var btn = document.querySelector('.interval-btn[data-s="'+semi+'"]');
+    if (!btn) return;
+    btn.classList.add('lit');
+    setTimeout(function(){ btn.classList.remove('lit'); }, durMs);
+}
+
+function clearLit() {
+    document.querySelectorAll('.interval-btn.lit').forEach(function(b){ b.classList.remove('lit'); });
+    var d=document.getElementById('do-indicator'); if(d)d.classList.remove('lit');
+}
+
+function lightDo(delayMs, durMs) {
+    setTimeout(function(){
+        var el=document.getElementById('do-indicator');
+        if(!el)return; el.classList.add('lit');
+        setTimeout(function(){el.classList.remove('lit');},durMs);
+    },delayMs);
+}
+
+function schedLight(semi, delayMs, durMs) {
+    setTimeout(function(){ clearLit(); litBtn(semi, durMs); }, delayMs);
+}
+
+/* ============================
+   RESULTS
+   ============================ */
+
+function showResults() {
+    var el = document.getElementById('el-final-score');
+    var msg = document.getElementById('el-result-msg');
+    var eBtn = document.getElementById('btn-easter');
+    el.textContent = game.score + ' / ' + game.total;
+    if (game.score === game.total) {
+        el.className = 'score-big score-perfect';
+        msg.innerHTML = 'Perfect score! You have an incredible ear.<br>A secret game has been unlocked\u2026';
+        eBtn.style.display = 'inline-block';
+        initAudio(); var now = ac.currentTime;
+        tone(noteFreq('C4'),now,0.3,0.15); tone(noteFreq('E4'),now+0.15,0.3,0.15);
+        tone(noteFreq('G4'),now+0.3,0.3,0.15); tone(noteFreq('C5'),now+0.45,0.5,0.2);
+    } else if (game.score >= game.pass) {
+        el.className = 'score-big score-pass';
+        msg.textContent = 'You passed! Keep training to sharpen your ear.';
+        eBtn.style.display = 'none';
+    } else {
+        el.className = 'score-big score-fail';
+        msg.textContent = 'Not quite. Keep practicing \u2014 your ear will improve!';
+        eBtn.style.display = 'none';
+    }
+    showScreen('results');
+}
+
+/* ============================
+   EASTER EGG GAME
+   ============================ */
+
+function startEaster() {
+    initAudio();
+    SECRET = generateSecret();
+    notationMode=true;
+    document.getElementById('melody-timeline').style.display='none';
+    document.getElementById('notation-canvas').style.display='block';
+    document.getElementById('btn-notation').textContent='Piano Roll';
+    setupNotationCanvas();
+    egg.captured.clear(); egg.fx=[]; egg.won=false; egg.keys={}; egg.stars=null;
+    var canvas=document.getElementById('game-canvas');
+    var dpr=window.devicePixelRatio||1;
+    var W=window.innerWidth, H=window.innerHeight;
+    canvas.width=W*dpr; canvas.height=H*dpr;
+    canvas.style.width=W+'px'; canvas.style.height=H+'px';
+    egg.player.x=W/2; egg.player.y=H/2;
+    egg.notes = SECRET.pcs.map(function(p){
+        return {
+            x:80+Math.random()*(W-160), y:100+Math.random()*(H-240),
+            vx:(Math.random()-0.5)*1.4, vy:(Math.random()-0.5)*1.4,
+            pc:p, color:PC_COLORS[p], radius:28, captured:false
+        };
+    });
+    egg.totalBeats=SECRET.mel.reduce(function(s,n){return s+n.b;},0);
+    egg.beatDur=60/SECRET.bpm;
+    buildTimeline(); updateBadges();
+    document.getElementById('melody-label').textContent='Melody: ???';
+    document.getElementById('easter-instructions').style.opacity='1';
+    document.getElementById('victory-overlay').classList.remove('active');
+    egg.instTO=setTimeout(function(){document.getElementById('easter-instructions').style.opacity='0';},6000);
+    showScreen('easter'); egg.on=true;
+    scheduleMelody(); easterLoop();
+}
+
+function stopEaster() {
+    egg.on=false;
+    if(egg.melTO){clearTimeout(egg.melTO);egg.melTO=null;}
+    if(egg.raf){cancelAnimationFrame(egg.raf);egg.raf=null;}
+    if(egg.instTO){clearTimeout(egg.instTO);}
+    if(melGain){try{melGain.gain.linearRampToValueAtTime(0,ac.currentTime+0.1);}catch(e){} melGain=null;}
+}
+
+var melGain=null; // gain node for current melody loop (so we can fade it on restart)
+
+function scheduleMelody() {
+    if(!egg.on)return;
+    // Fade out previous loop if still playing
+    if(melGain){
+        try{melGain.gain.setValueAtTime(melGain.gain.value,ac.currentTime);
+            melGain.gain.linearRampToValueAtTime(0,ac.currentTime+0.15);}catch(e){}
+    }
+    // New gain node for this loop
+    melGain=ac.createGain(); melGain.connect(ac.destination);
+
+    var bd=egg.beatDur, t=ac.currentTime+0.35;
+    egg.loopStart=t;
+    SECRET.mel.forEach(function(note){
+        var p=pc(note.n), dur=note.b*bd;
+        if(egg.captured.has(p)) toneN(note.n,t,dur*0.85,0.3,melGain);
+        t+=dur;
+    });
+    egg.melTO=setTimeout(function(){if(egg.on)scheduleMelody();},(egg.totalBeats*bd+1.5)*1000);
+}
+
+function captureNote(note) {
+    note.captured=true; egg.captured.add(note.pc);
+    tone(noteFreq(note.pc+'4'),ac.currentTime,0.4,0.4);
+    egg.fx.push({x:note.x,y:note.y,color:note.color,r:0,mr:90,a:1});
+    updateBadges(); updateTL();
+    // Restart melody immediately so the newly captured note is heard
+    if(egg.melTO){clearTimeout(egg.melTO);egg.melTO=null;}
+    scheduleMelody();
+    if(egg.captured.size===SECRET.pcs.length&&!egg.won){egg.won=true;setTimeout(showVictory,2000);}
+}
+
+function showVictory() {
+    document.getElementById('victory-title').textContent=SECRET.name;
+    document.getElementById('victory-sub').textContent='by '+SECRET.composer+'\nYou revealed the entire melody!';
+    document.getElementById('melody-label').textContent='Melody: '+SECRET.name;
+    document.getElementById('victory-overlay').classList.add('active');
+}
+
+function buildTimeline() {
+    var el=document.getElementById('melody-timeline'); el.innerHTML='';
+    // Find pitch range for vertical mapping
+    var midis=SECRET.mel.map(function(note){return n2m(note.n);});
+    var lo=Math.min.apply(null,midis), hi=Math.max.apply(null,midis);
+    var range=hi-lo||1;
+    // Usable vertical space: container 100px - 8px padding - 7px segment = 85px
+    var usable=85;
+    SECRET.mel.forEach(function(note,i){
+        var seg=document.createElement('div'); seg.className='tl-seg';
+        seg.style.flex=note.b+' 0 0'; seg.dataset.pc=pc(note.n);
+        seg.dataset.idx=i; seg.style.background='#1a1a2e';
+        // Vertical offset by pitch
+        var pct=(n2m(note.n)-lo)/range;
+        seg.style.marginBottom=Math.round(pct*usable)+'px';
+        el.appendChild(seg);
+    });
+}
+function updateTL() {
+    document.querySelectorAll('.tl-seg').forEach(function(seg){
+        if(egg.captured.has(seg.dataset.pc)){seg.style.background=PC_COLORS[seg.dataset.pc]||'#4a4a8a';seg.style.opacity='0.55';}
+    });
+}
+function updateTLPlayhead() {
+    if(!egg.on||!ac)return;
+    var elapsed=ac.currentTime-egg.loopStart, totalDur=egg.totalBeats*egg.beatDur;
+    var segs=document.querySelectorAll('.tl-seg'), accum=0;
+    segs.forEach(function(seg,i){
+        var ns=accum, nd=SECRET.mel[i].b*egg.beatDur; accum+=nd;
+        var isNow=elapsed>=ns&&elapsed<ns+nd&&elapsed>=0&&elapsed<=totalDur;
+        var isCap=egg.captured.has(seg.dataset.pc);
+        if(isNow&&isCap){seg.classList.add('now');seg.style.opacity='1';}
+        else{seg.classList.remove('now');seg.style.opacity=isCap?'0.55':'';}
+    });
+}
+function updateBadges() {
+    document.getElementById('el-badges').innerHTML=SECRET.pcs.map(function(p){
+        return '<span class="note-badge '+(egg.captured.has(p)?'captured':'uncaptured')+'">'+dpc(p)+'</span>';
+    }).join('');
+}
+
+/* ============================
+   NOTATION VIEW
+   ============================ */
+
+function staffPos(name) {
+    var m=name.match(/^([A-G])(#|b)?(\d)$/);
+    var lp={C:0,D:1,E:2,F:3,G:4,A:5,B:6};
+    return (parseInt(m[3])-4)*7+lp[m[1]];
+}
+function staffY(p) { return 70-(p-2)*5; }
+
+function setupNotationCanvas() {
+    var cv=document.getElementById('notation-canvas');
+    var dpr=window.devicePixelRatio||1;
+    var w=window.innerWidth-40;
+    cv.width=w*dpr; cv.height=100*dpr;
+    cv.style.width=w+'px'; cv.style.height='100px';
+}
+
+function toggleNotation() {
+    notationMode=!notationMode;
+    document.getElementById('melody-timeline').style.display=notationMode?'none':'flex';
+    document.getElementById('notation-canvas').style.display=notationMode?'block':'none';
+    document.getElementById('btn-notation').textContent=notationMode?'Piano Roll':'Staff';
+    if(notationMode) setupNotationCanvas();
+}
+
+function renderNotation() {
+    if(!notationMode||!egg.on)return;
+    var cv=document.getElementById('notation-canvas');
+    if(!cv)return;
+    var dpr=window.devicePixelRatio||1;
+    var c=cv.getContext('2d');
+    var W=cv.width/dpr, H=cv.height/dpr;
+    c.setTransform(dpr,0,0,dpr,0,0);
+    c.clearRect(0,0,W,H);
+
+    // Background
+    c.fillStyle='rgba(10,10,30,0.9)';
+    c.fillRect(0,0,W,H);
+
+    // 5 staff lines
+    c.strokeStyle='#3a3a6a'; c.lineWidth=1; c.beginPath();
+    for(var i=0;i<5;i++){var ly=30+i*10; c.moveTo(28,ly); c.lineTo(W-4,ly);}
+    c.stroke();
+
+    // Treble clef
+    c.fillStyle='#5555aa'; c.font='42px "Segoe UI Symbol",serif';
+    c.textBaseline='middle'; c.textAlign='center';
+    c.fillText('\uD834\uDD1E',16,50);
+
+    // Notes
+    var startX=34, endX=W-4, noteArea=endX-startX;
+    var totalBeats=egg.totalBeats, totalDur=totalBeats*egg.beatDur;
+    var elapsed=ac?ac.currentTime-egg.loopStart:-1;
+    var cumBeat=0;
+
+    SECRET.mel.forEach(function(note){
+        var x=startX+(cumBeat/totalBeats)*noteArea;
+        var w=(note.b/totalBeats)*noteArea;
+        var cx=x+Math.min(w*0.4,12);
+        var p=pc(note.n);
+        var cap=egg.captured.has(p);
+        var col=cap?(PC_COLORS[p]||'#80ff80'):'#2a2a4a';
+        var sp=staffPos(note.n);
+        var ny=staffY(sp);
+
+        // Ledger lines
+        c.strokeStyle=col; c.lineWidth=1; c.beginPath();
+        if(sp<=0){for(var lp=0;lp>=sp;lp-=2){var y=staffY(lp);c.moveTo(cx-8,y);c.lineTo(cx+8,y);}}
+        if(sp>=12){for(var lp=12;lp<=sp;lp+=2){var y=staffY(lp);c.moveTo(cx-8,y);c.lineTo(cx+8,y);}}
+        c.stroke();
+
+        // Note head (filled=quarter/eighth, hollow=half+)
+        var filled=note.b<1.5;
+        c.save(); c.translate(cx,ny); c.rotate(-0.25); c.scale(1.25,1);
+        c.beginPath(); c.arc(0,0,3.5,0,Math.PI*2);
+        if(filled){c.fillStyle=col;c.fill();}
+        else{c.strokeStyle=col;c.lineWidth=1.4;c.stroke();}
+        c.restore();
+
+        // Stem (skip for whole notes b>=3)
+        if(note.b<3){
+            c.strokeStyle=col; c.lineWidth=1; c.beginPath();
+            if(sp>=6){c.moveTo(cx-4,ny);c.lineTo(cx-4,ny+24);}
+            else{c.moveTo(cx+4,ny);c.lineTo(cx+4,ny-24);}
+            c.stroke();
+
+            // Flag for eighths (b<0.75)
+            if(note.b<0.75){
+                c.strokeStyle=col; c.lineWidth=1.2; c.beginPath();
+                if(sp>=6){
+                    c.moveTo(cx-4,ny+24);c.quadraticCurveTo(cx+5,ny+18,cx-2,ny+13);
+                }else{
+                    c.moveTo(cx+4,ny-24);c.quadraticCurveTo(cx+13,ny-18,cx+6,ny-13);
+                }
+                c.stroke();
+            }
+        }
+
+        // Accidental
+        var nm=note.n.match(/^[A-G](#|b)?/);
+        if(nm&&nm[1]){
+            c.fillStyle=col; c.font='bold 9px serif';
+            c.textAlign='right'; c.textBaseline='middle';
+            c.fillText(nm[1]==='#'?'\u266F':'\u266D',cx-7,ny);
+        }
+
+        cumBeat+=note.b;
+    });
+
+    // Playhead
+    if(elapsed>=0&&elapsed<=totalDur){
+        var phX=startX+(elapsed/totalDur)*noteArea;
+        c.strokeStyle='rgba(255,255,255,0.5)'; c.lineWidth=1.5;
+        c.beginPath(); c.moveTo(phX,10); c.lineTo(phX,90); c.stroke();
+    }
+}
+
+function easterLoop() {
+    if(!egg.on)return;
+    var canvas=document.getElementById('game-canvas'),dpr=window.devicePixelRatio||1;
+    var c=canvas.getContext('2d'),W=canvas.width/dpr,H=canvas.height/dpr;
+    c.setTransform(dpr,0,0,dpr,0,0); c.clearRect(0,0,W,H);
+    var gr=c.createRadialGradient(W/2,H/2,0,W/2,H/2,Math.max(W,H)*0.7);
+    gr.addColorStop(0,'#0e0e28');gr.addColorStop(1,'#06060f');
+    c.fillStyle=gr;c.fillRect(0,0,W,H);
+    if(!egg.stars){egg.stars=[];for(var i=0;i<80;i++)egg.stars.push({x:Math.random()*W,y:Math.random()*H,r:Math.random()*1.2+0.3,a:Math.random()*0.4+0.2});}
+    var now=Date.now();
+    egg.stars.forEach(function(s){c.globalAlpha=s.a*(0.5+Math.sin(now*0.001+s.x)*0.5);c.fillStyle='#6666aa';c.beginPath();c.arc(s.x,s.y,s.r,0,Math.PI*2);c.fill();});
+    c.globalAlpha=1;
+    var spd=5.5;
+    if(egg.keys.ArrowLeft||egg.keys.a)egg.player.x-=spd;
+    if(egg.keys.ArrowRight||egg.keys.d)egg.player.x+=spd;
+    if(egg.keys.ArrowUp||egg.keys.w)egg.player.y-=spd;
+    if(egg.keys.ArrowDown||egg.keys.s)egg.player.y+=spd;
+    egg.player.x=Math.max(15,Math.min(W-15,egg.player.x));
+    egg.player.y=Math.max(15,Math.min(H-15,egg.player.y));
+    var px=egg.player.x,py=egg.player.y;
+    egg.notes.forEach(function(nt){
+        if(nt.captured)return;
+        var dx=nt.x-px,dy=nt.y-py,dist=Math.sqrt(dx*dx+dy*dy)||1;
+        nt.x+=nt.vx;nt.y+=nt.vy;
+        if(dist<160){var str=(160-dist)/160*2.2;nt.x+=(dx/dist)*str;nt.y+=(dy/dist)*str;}
+        if(nt.x<45){nt.x=45;nt.vx=Math.abs(nt.vx);}
+        if(nt.x>W-45){nt.x=W-45;nt.vx=-Math.abs(nt.vx);}
+        if(nt.y<55){nt.y=55;nt.vy=Math.abs(nt.vy);}
+        if(nt.y>H-140){nt.y=H-140;nt.vy=-Math.abs(nt.vy);}
+        if(Math.random()<0.01){nt.vx+=(Math.random()-0.5)*0.3;nt.vy+=(Math.random()-0.5)*0.3;nt.vx=Math.max(-1.5,Math.min(1.5,nt.vx));nt.vy=Math.max(-1.5,Math.min(1.5,nt.vy));}
+        var fdx=nt.x-px,fdy=nt.y-py;
+        if(Math.sqrt(fdx*fdx+fdy*fdy)<42)captureNote(nt);
+        c.shadowColor=nt.color;c.shadowBlur=14;
+        c.fillStyle=nt.color+'30';c.strokeStyle=nt.color;c.lineWidth=2;
+        c.beginPath();c.arc(nt.x,nt.y,nt.radius,0,Math.PI*2);c.fill();c.stroke();
+        c.shadowBlur=0;c.fillStyle=nt.color;
+        c.font='bold 15px "Segoe UI",system-ui,sans-serif';
+        c.textAlign='center';c.textBaseline='middle';
+        c.fillText(dpc(nt.pc),nt.x,nt.y);
+    });
+    egg.fx=egg.fx.filter(function(fx){
+        fx.r+=3;fx.a-=0.025;if(fx.a<=0)return false;
+        c.globalAlpha=fx.a;c.strokeStyle=fx.color;c.lineWidth=2;
+        c.beginPath();c.arc(fx.x,fx.y,fx.r,0,Math.PI*2);c.stroke();c.globalAlpha=1;return true;
+    });
+    var pf=0.8+Math.sin(now*0.005)*0.2;
+    c.fillStyle='rgba(150,150,255,'+(0.08*pf)+')';c.beginPath();c.arc(px,py,30,0,Math.PI*2);c.fill();
+    c.strokeStyle='rgba(180,180,255,'+(0.7*pf)+')';c.lineWidth=2;c.beginPath();c.arc(px,py,14,0,Math.PI*2);c.stroke();
+    c.strokeStyle='rgba(180,180,255,0.35)';c.lineWidth=1;c.beginPath();
+    c.moveTo(px-20,py);c.lineTo(px-8,py);c.moveTo(px+8,py);c.lineTo(px+20,py);
+    c.moveTo(px,py-20);c.lineTo(px,py-8);c.moveTo(px,py+8);c.lineTo(px,py+20);c.stroke();
+    c.fillStyle='rgba(200,200,255,0.9)';c.beginPath();c.arc(px,py,3,0,Math.PI*2);c.fill();
+    if(notationMode) renderNotation();
+    else updateTLPlayhead();
+    egg.raf=requestAnimationFrame(easterLoop);
+}
+
+/* ============================
+   UI HELPERS
+   ============================ */
+
+function showScreen(name) {
+    if(curScreen==='easter'&&name!=='easter')stopEaster();
+    document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});
+    var el=document.getElementById('screen-'+name);
+    if(el)el.classList.add('active');
+    curScreen=name;
+    document.body.style.overflow=(name==='easter')?'hidden':'';
+}
+
+function buildGrid() {
+    var grid=document.getElementById('el-grid'); grid.innerHTML='';
+    var showAll=document.getElementById('chk-allhalf').checked;
+    // Stack from Do' (top) to Ra (bottom)
+    for(var i=INTERVALS.length-1;i>=0;i--){
+        (function(iv){
+            var btn=document.createElement('button');
+            btn.className='interval-btn'; btn.dataset.s=iv.s;
+            btn.innerHTML='<span class="abbr">'+SOLFEGE[iv.s]+'</span><span class="name">'+iv.a+'</span>';
+            btn.addEventListener('click',function(){ doGuess(iv.s); });
+            if(!showAll&&!DIATONIC[iv.s]) btn.style.display='none';
+            grid.appendChild(btn);
+        })(INTERVALS[i]);
+    }
+    // Do indicator at bottom
+    var doEl=document.createElement('div');
+    doEl.id='do-indicator'; doEl.className='do-ind';
+    doEl.innerHTML='<span class="abbr">Do</span><span class="name">Root</span>';
+    grid.appendChild(doEl);
+}
+
+function updateVisibleIntervals() {
+    var showAll=document.getElementById('chk-allhalf').checked;
+    document.querySelectorAll('.interval-btn').forEach(function(btn){
+        var s=parseInt(btn.dataset.s);
+        if(isNaN(s))return;
+        btn.style.display=(!showAll&&!DIATONIC[s])?'none':'';
+    });
+}
+
+function updateGameUI(resetBtns) {
+    document.getElementById('el-round').textContent=game.round;
+    document.getElementById('el-score').textContent=game.score;
+    document.getElementById('el-guesses').textContent=game.guesses;
+    document.getElementById('el-progress').style.width=((game.round-1)/game.total*100)+'%';
+    if(resetBtns){
+        document.querySelectorAll('.interval-btn').forEach(function(b){
+            b.className='interval-btn';b.disabled=false;
+        });
+        document.getElementById('feedback').style.display='none';
+        document.getElementById('btn-play').disabled=false;
+    }
+}
+
+function markBtn(semi,cls){
+    var btn=document.querySelector('.interval-btn[data-s="'+semi+'"]');
+    if(btn)btn.classList.add(cls);
+}
+
+function showFeedback(correct) {
+    var el=document.getElementById('feedback');
+    var text=document.getElementById('feedback-text');
+    var info=document.getElementById('example-info');
+    var exBtn=document.getElementById('btn-example');
+    var nBtn=document.getElementById('btn-next');
+    el.style.display='block';
+    var iv=game.cur.iv;
+    if(correct){
+        text.className='fc';
+        text.textContent='Correct! Do \u2192 '+SOLFEGE[iv.s]+' ('+iv.n+')';
+    } else {
+        text.className='fw';
+        text.textContent='Answer: Do \u2192 '+SOLFEGE[iv.s]+' ('+iv.n+')';
+    }
+    var ex=EX[iv.s];
+    if(ex&&ex.t){
+        info.style.display='block';
+        info.textContent='Example: \u201C'+ex.t+'\u201D'+(ex.by?' \u2014 '+ex.by:'');
+        exBtn.style.display='inline-block';
+    } else {info.style.display='none';exBtn.style.display='none';}
+    nBtn.textContent=game.round>=game.total?'See Results':'Next';
+    document.querySelectorAll('.interval-btn').forEach(function(b){b.disabled=true;});
+    if(!correct){setTimeout(playInterval,400);}
+}
+
+/* ============================
+   EVENT HANDLERS
+   ============================ */
+
+document.getElementById('btn-start').addEventListener('click',startGame);
+document.getElementById('btn-play').addEventListener('click',playInterval);
+document.getElementById('btn-example').addEventListener('click',playExample);
+document.getElementById('btn-next').addEventListener('click',nextRound);
+document.getElementById('btn-again').addEventListener('click',startGame);
+document.getElementById('btn-easter').addEventListener('click',startEaster);
+document.getElementById('btn-notation').addEventListener('click',toggleNotation);
+document.getElementById('btn-back').addEventListener('click',function(){showScreen('title');});
+document.getElementById('btn-victory-next').addEventListener('click',function(){
+    document.getElementById('victory-overlay').classList.remove('active');
+    stopEaster();startEaster();
+});
+document.getElementById('btn-victory-back').addEventListener('click',function(){
+    document.getElementById('victory-overlay').classList.remove('active');
+    stopEaster();showScreen('title');
+});
+
+// Toggle chromatic intervals
+document.getElementById('chk-allhalf').addEventListener('change',updateVisibleIntervals);
+
+// Tone selector
+document.querySelectorAll('.tone-btn').forEach(function(btn){
+    btn.addEventListener('click',function(){
+        document.querySelectorAll('.tone-btn').forEach(function(b){b.classList.remove('sel');});
+        btn.classList.add('sel');
+        curTone=btn.dataset.t;
+        // Preview tone
+        initAudio();
+        tone(noteFreq('C4'),ac.currentTime,0.3,0.2);
+    });
+});
+
+// Easter egg input
+var gameCanvas=document.getElementById('game-canvas');
+gameCanvas.addEventListener('mousemove',function(e){if(curScreen!=='easter')return;egg.player.x=e.clientX;egg.player.y=e.clientY;});
+gameCanvas.addEventListener('touchstart',function(e){if(curScreen!=='easter')return;e.preventDefault();egg.player.x=e.touches[0].clientX;egg.player.y=e.touches[0].clientY;},{passive:false});
+gameCanvas.addEventListener('touchmove',function(e){if(curScreen!=='easter')return;e.preventDefault();egg.player.x=e.touches[0].clientX;egg.player.y=e.touches[0].clientY;},{passive:false});
+
+document.addEventListener('keydown',function(e){
+    // Secret shortcut: press S to jump into easter egg game
+    if(e.key==='s'&&curScreen!=='easter'){initAudio();startEaster();return;}
+    if(curScreen==='easter'){
+        if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].indexOf(e.key)>=0)e.preventDefault();
+        egg.keys[e.key]=true;
+    }
+});
+document.addEventListener('keyup',function(e){egg.keys[e.key]=false;});
+
+window.addEventListener('resize',function(){
+    if(curScreen==='easter'){
+        var canvas=document.getElementById('game-canvas'),dpr=window.devicePixelRatio||1;
+        canvas.width=window.innerWidth*dpr;canvas.height=window.innerHeight*dpr;
+        canvas.style.width=window.innerWidth+'px';canvas.style.height=window.innerHeight+'px';
+        egg.stars=null;
+        if(notationMode) setupNotationCanvas();
+    }
+});
+
+/* ============================
+   INIT
+   ============================ */
+buildGrid();
+
+})();
+</script>
+</body>
+</html>
