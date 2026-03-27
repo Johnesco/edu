@@ -3,7 +3,9 @@
     "allow": [
       "Bash(cd:*)",
       "Bash(cd /c/code/edu && gh api repos/Johnesco/edu/pages 2>&1)",
-      "Bash(cd /c/code/edu && gh api repos/Johnesco/edu/pages -X POST -f \"source[branch]=master\" -f \"source[path]=/\" 2>&1)"
+      "Bash(cd /c/code/edu && gh api repos/Johnesco/edu/pages -X POST -f \"source[branch]=master\" -f \"source[path]=/\" 2>&1)",
+      "Bash(gh api:*)",
+      "Bash(git fetch:*)"
     ]
   }
 }

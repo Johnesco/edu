@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>State Abbreviations</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0a0a14;--surface:#14142a;--border:#1e1e3a;
+  --accent:#fbbf24;--accent-glow:rgba(251,191,36,.45);
+  --blue:#7c83ff;--text:#e0e0ee;--dim:#555570;
+  --success:#4ade80;--fail:#f87171;
+}
+body{
+  font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
+  background:var(--bg);color:var(--text);
+  min-height:100vh;overflow-x:hidden;
+}
+
+/* ── Header ── */
+header{text-align:center;padding:1.2rem 1rem .2rem}
+header h1{font-size:1.5rem;font-weight:700}
+header h1 span{color:var(--blue)}
+.subtitle{color:var(--dim);font-size:.75rem;margin-top:.15rem}
+
+/* ── Tabs ── */
+.tabs{
+  display:flex;justify-content:center;gap:.4rem;
+  margin:.7rem auto;max-width:300px;
+}
+.tab{
+  flex:1;padding:.45rem;border:2px solid var(--blue);
+  background:transparent;color:var(--blue);border-radius:8px;
+  font-size:.85rem;font-weight:600;cursor:pointer;transition:all .2s;
+}
+.tab:hover,.tab.active{background:var(--blue);color:var(--bg)}
+
+/* ── Panels ── */
+.panel{display:none}.panel.active{display:block}
+
+/* ═══ LEARN MODE ═══ */
+#stage{
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  min-height:50vh;padding:1.5rem 1rem;
+  position:relative;
+}
+#counter{
+  font-size:.8rem;color:var(--dim);margin-bottom:1.5rem;
+  font-variant-numeric:tabular-nums;
+}
+#display{
+  display:flex;align-items:baseline;justify-content:center;
+  font-size:clamp(2.5rem,7vw,4.5rem);
+  font-weight:700;min-height:6rem;
+  transition:transform .6s cubic-bezier(.34,1.56,.64,1),opacity .35s ease;
+}
+.letter{
+  display:inline-block;
+  opacity:0;transform:translateY(18px);
+  white-space:pre;position:relative;
+  transition:opacity .3s ease,transform .3s ease,
+             color .35s ease,text-shadow .35s ease;
+}
+.letter.visible{opacity:1;transform:translateY(0)}
+.letter.dim{opacity:.25;color:var(--dim)}
+.letter.glow{
+  color:var(--accent);
+  text-shadow:0 0 20px var(--accent-glow),0 0 45px var(--accent-glow);
+  text-transform:uppercase;
+  animation:hlPop .4s ease;
+}
+@keyframes hlPop{
+  0%{transform:translateY(0) scale(1)}
+  40%{transform:translateY(-8px) scale(1.2)}
+  100%{transform:translateY(-2px) scale(1.1)}
+}
+.letter.collapsing{
+  opacity:0 !important;width:0 !important;overflow:hidden;
+  transition:opacity .45s ease,width .55s cubic-bezier(.4,0,.2,1) !important;
+}
+#state-label{
+  font-size:.95rem;color:var(--dim);margin-top:1.2rem;
+  opacity:0;transition:opacity .4s ease;min-height:1.5rem;
+}
+#state-label.visible{opacity:1}
+#mnemonic{
+  font-size:.75rem;color:var(--accent);font-style:italic;
+  margin-top:.3rem;opacity:0;transition:opacity .4s ease;min-height:1.2rem;
+}
+#mnemonic.visible{opacity:1}
+
+/* Controls */
+#learn-controls{
+  display:flex;align-items:center;justify-content:center;
+  gap:.5rem;margin:.8rem auto;
+}
+.ctrl-btn{
+  width:38px;height:38px;border-radius:50%;
+  border:2px solid var(--dim);background:transparent;
+  color:var(--text);font-size:1rem;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:all .2s;
+}
+.ctrl-btn:hover{border-color:var(--blue);color:var(--blue)}
+.ctrl-btn.play{
+  width:46px;height:46px;font-size:1.2rem;border-color:var(--blue);
+}
+.speed-ctrl{
+  display:flex;align-items:center;gap:.25rem;
+  margin-left:.5rem;color:var(--dim);font-size:.7rem;
+}
+.speed-ctrl input[type=range]{width:55px;accent-color:var(--blue)}
+.speed-label{min-width:2rem;text-align:center;color:var(--text);font-weight:600}
+
+/* State strip */
+#state-strip{
+  display:flex;gap:2px;justify-content:center;flex-wrap:wrap;
+  max-width:720px;margin:.5rem auto 1rem;padding:0 .5rem;
+}
+.si{
+  width:25px;height:20px;display:flex;align-items:center;justify-content:center;
+  font-size:.5rem;font-weight:700;border-radius:3px;
+  background:var(--surface);color:var(--dim);
+  cursor:pointer;transition:all .2s;border:1px solid transparent;
+}
+.si:hover{border-color:var(--blue);color:var(--text)}
+.si.current{background:var(--blue);color:var(--bg);border-color:var(--blue)}
+.si.visited{color:var(--text);background:#1c1c38}
+
+.keys-hint{
+  text-align:center;font-size:.6rem;color:var(--dim);
+  margin-top:.3rem;padding-bottom:.5rem;
+}
+
+/* ═══ QUIZ MODE ═══ */
+.quiz-container{max-width:600px;margin:0 auto;text-align:center;padding:1rem}
+.quiz-progress{
+  width:100%;height:5px;background:var(--surface);
+  border-radius:3px;overflow:hidden;margin-bottom:1rem;
+}
+.quiz-bar{height:100%;background:var(--blue);transition:width .3s;border-radius:3px}
+.quiz-score{
+  display:flex;justify-content:center;gap:2rem;margin-bottom:1rem;font-size:.85rem;
+}
+.quiz-score span{color:var(--dim)}
+.quiz-score strong{color:var(--blue);font-size:1rem}
+.quiz-timer{color:var(--dim);font-size:.75rem;margin-bottom:.8rem}
+.quiz-timer.warn{color:var(--fail);font-weight:700;font-size:.85rem}
+.quiz-prompt{font-size:1rem;color:var(--dim);margin-bottom:.4rem}
+.quiz-state{font-size:2rem;font-weight:800;margin-bottom:1.2rem;min-height:2.8rem}
+.quiz-state.reverse{color:var(--blue);letter-spacing:.1em}
+.quiz-options{
+  display:grid;grid-template-columns:1fr 1fr;gap:.5rem;
+  max-width:380px;margin:0 auto 1.2rem;
+}
+.quiz-opt{
+  padding:.7rem;border-radius:10px;border:2px solid var(--border);
+  background:var(--surface);color:var(--text);font-size:.95rem;
+  cursor:pointer;transition:all .2s;font-weight:600;
+}
+.quiz-opt:hover{border-color:var(--blue);transform:scale(1.03)}
+.quiz-opt.correct{
+  border-color:var(--success);background:#4ade8018;color:var(--success);
+  animation:popOk .35s;
+}
+.quiz-opt.wrong{
+  border-color:var(--fail);background:#f8717118;color:var(--fail);
+  animation:shake .35s;
+}
+@keyframes popOk{0%{transform:scale(1)}50%{transform:scale(1.07)}100%{transform:scale(1)}}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+.quiz-complete{display:none;text-align:center}
+.quiz-complete h2{font-size:1.8rem;margin-bottom:.4rem}
+.quiz-complete .final-score{font-size:2.8rem;font-weight:800;color:var(--blue)}
+.quiz-complete .final-label{color:var(--dim);margin-bottom:1rem}
+.quiz-complete .grade{font-size:1.3rem;margin-bottom:.8rem}
+.quiz-complete button{
+  padding:.5rem 1.4rem;border-radius:8px;border:none;
+  background:var(--blue);color:var(--bg);font-weight:700;
+  font-size:.95rem;cursor:pointer;margin-top:.5rem;
+}
+.missed-list{max-width:380px;margin:.8rem auto;text-align:left}
+.missed-list h3{color:var(--fail);margin-bottom:.4rem;font-size:.8rem}
+.missed-item{
+  display:flex;justify-content:space-between;
+  padding:.25rem .4rem;border-bottom:1px solid var(--surface);font-size:.8rem;
+}
+.missed-item .ms{color:var(--dim)}.missed-item .ma{color:var(--blue);font-weight:700}
+
+/* Streak */
+#streak-flame{
+  position:fixed;top:.8rem;right:.8rem;
+  font-size:1.4rem;display:none;z-index:50;
+  animation:flamePulse 1s infinite alternate;
+}
+#streak-flame.on{display:block}
+.sn{font-weight:800;color:var(--accent);font-size:1.1rem;vertical-align:middle}
+@keyframes flamePulse{from{transform:scale(1)}to{transform:scale(1.12)}}
+
+/* ═══ DOTTIE ═══ */
+#dottie{
+  position:fixed;inset:0;z-index:9999;
+  display:flex;align-items:center;justify-content:center;
+  background:rgba(0,0,0,.93);pointer-events:none;
+  opacity:0;transition:opacity .12s;
+}
+#dottie.show{opacity:1}
+.dottie-text{
+  font-size:clamp(2rem,9vw,5.5rem);font-weight:900;
+  color:#fff;text-transform:uppercase;
+  text-shadow:0 0 30px var(--fail),0 0 60px var(--fail),0 0 100px var(--fail);
+  animation:dottieShake .07s infinite alternate;
+  letter-spacing:.04em;
+}
+@keyframes dottieShake{
+  from{transform:translate(-3px,1px) rotate(-1.5deg)}
+  to{transform:translate(3px,-1px) rotate(1.5deg)}
+}
+
+@media(max-width:480px){
+  #display{font-size:clamp(2rem,10vw,3.5rem)}
+  .si{width:22px;height:18px;font-size:.45rem}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>State <span>Abbreviations</span></h1>
+  <div class="subtitle">All 50 states &mdash; learn the letters, take the quiz</div>
+</header>
+
+<div class="tabs">
+  <button class="tab active" data-mode="learn">Learn</button>
+  <button class="tab" data-mode="quiz">Quiz</button>
+</div>
+
+<!-- ═══ LEARN PANEL ═══ -->
+<div id="learn-panel" class="panel active">
+  <div id="stage">
+    <div id="counter">1 / 50</div>
+    <div id="display"></div>
+    <div id="state-label"></div>
+    <div id="mnemonic"></div>
+  </div>
+  <div id="learn-controls">
+    <button class="ctrl-btn" id="prev-btn" title="Previous (Left arrow)">&#9664;</button>
+    <button class="ctrl-btn play" id="play-btn" title="Play/Pause (Space)">&#9646;&#9646;</button>
+    <button class="ctrl-btn" id="next-btn" title="Next (Right arrow)">&#9654;</button>
+    <div class="speed-ctrl">
+      <span>Speed</span>
+      <input type="range" id="speed-range" min="1" max="5" value="2">
+      <span class="speed-label" id="speed-label">1x</span>
+    </div>
+  </div>
+  <div id="state-strip"></div>
+  <div class="keys-hint">Space = play/pause &middot; Arrow keys = prev/next</div>
+</div>
+
+<!-- ═══ QUIZ PANEL ═══ -->
+<div id="quiz-panel" class="panel">
+  <div class="quiz-container">
+    <div class="quiz-progress"><div class="quiz-bar" id="q-bar"></div></div>
+    <div class="quiz-score">
+      <span>Score: <strong id="q-score">0</strong>/50</span>
+      <span>Streak: <strong id="q-streak">0</strong></span>
+    </div>
+    <div class="quiz-timer" id="q-timer">0:00</div>
+    <div class="quiz-prompt" id="q-prompt">What is the abbreviation for:</div>
+    <div class="quiz-state" id="q-state"></div>
+    <div class="quiz-options" id="q-opts"></div>
+    <div class="quiz-complete" id="q-done">
+      <h2>Quiz Complete!</h2>
+      <div class="final-score" id="q-final"></div>
+      <div class="final-label">out of 50</div>
+      <div class="grade" id="q-grade"></div>
+      <div class="missed-list" id="q-missed"></div>
+      <button id="retry-btn">Try Again</button>
+    </div>
+  </div>
+</div>
+
+<div id="streak-flame">&#x1F525;<span class="sn" id="streak-num">0</span></div>
+<div id="dottie"><div class="dottie-text">NOT NOW DOTTIE!</div></div>
+
+<script>
+/* ═══════════════════════════════════════════════
+   STATE DATA — name, abbreviation, highlight indices,
+   mnemonic hint
+   h = [idx of 1st abbr letter, idx of 2nd abbr letter]
+   ═══════════════════════════════════════════════ */
+const S = [
+  {n:"Alabama",       a:"AL",h:[0,1], m:"ALways first (alphabetically)"},
+  {n:"Alaska",        a:"AK",h:[0,4], m:"AlasKa — A to K"},
+  {n:"Arizona",       a:"AZ",h:[0,3], m:"AriZona — A to Z"},
+  {n:"Arkansas",      a:"AR",h:[0,1], m:"ARkansas starts with AR"},
+  {n:"California",    a:"CA",h:[0,1], m:"CAlifornia dreamin'"},
+  {n:"Colorado",      a:"CO",h:[0,1], m:"COlorado, CO-oool"},
+  {n:"Connecticut",   a:"CT",h:[0,6], m:"ConneCTicut — CT hides inside"},
+  {n:"Delaware",      a:"DE",h:[0,1], m:"DElaware, first state"},
+  {n:"Florida",       a:"FL",h:[0,1], m:"FLorida sunshine"},
+  {n:"Georgia",       a:"GA",h:[0,6], m:"GeorgiA — G…A"},
+  {n:"Hawaii",        a:"HI",h:[0,4], m:"HawaIi says HI"},
+  {n:"Idaho",         a:"ID",h:[0,1], m:"IDaho potatoes"},
+  {n:"Illinois",      a:"IL",h:[0,1], m:"ILlinois starts IL"},
+  {n:"Indiana",       a:"IN",h:[0,1], m:"You're IN Indiana"},
+  {n:"Iowa",          a:"IA",h:[0,3], m:"IowA — I…A"},
+  {n:"Kansas",        a:"KS",h:[0,3], m:"KanSas — K…S"},
+  {n:"Kentucky",      a:"KY",h:[0,7], m:"KentuckY — K…Y"},
+  {n:"Louisiana",     a:"LA",h:[0,6], m:"LouisiAna — L…A"},
+  {n:"Maine",         a:"ME",h:[0,4], m:"MainE is all about ME"},
+  {n:"Maryland",      a:"MD",h:[0,7], m:"MarylanD — M…D"},
+  {n:"Massachusetts", a:"MA",h:[0,1], m:"MAssachusetts starts MA"},
+  {n:"Michigan",      a:"MI",h:[0,1], m:"MIchigan mitten"},
+  {n:"Minnesota",     a:"MN",h:[0,2], m:"MiNnesota — M…N"},
+  {n:"Mississippi",   a:"MS",h:[0,2], m:"MiSsissippi — M…S"},
+  {n:"Missouri",      a:"MO",h:[0,4], m:"MissOuri — M…O"},
+  {n:"Montana",       a:"MT",h:[0,3], m:"MonTana — M…T"},
+  {n:"Nebraska",      a:"NE",h:[0,1], m:"NEbraska starts NE"},
+  {n:"Nevada",        a:"NV",h:[0,2], m:"NeVada — N…V"},
+  {n:"New Hampshire", a:"NH",h:[0,4], m:"New Hampshire — N…H"},
+  {n:"New Jersey",    a:"NJ",h:[0,4], m:"New Jersey — N…J"},
+  {n:"New Mexico",    a:"NM",h:[0,4], m:"New Mexico — N…M"},
+  {n:"New York",      a:"NY",h:[0,4], m:"New York — N…Y"},
+  {n:"North Carolina",a:"NC",h:[0,6], m:"North Carolina — N…C"},
+  {n:"North Dakota",  a:"ND",h:[0,6], m:"North Dakota — N…D"},
+  {n:"Ohio",          a:"OH",h:[0,1], m:"OHio — OH!"},
+  {n:"Oklahoma",      a:"OK",h:[0,1], m:"OKlahoma is OK"},
+  {n:"Oregon",        a:"OR",h:[0,1], m:"ORegon trail"},
+  {n:"Pennsylvania",  a:"PA",h:[0,8], m:"PennsylvAnia — P…A"},
+  {n:"Rhode Island",  a:"RI",h:[0,6], m:"Rhode Island — R…I"},
+  {n:"South Carolina",a:"SC",h:[0,6], m:"South Carolina — S…C"},
+  {n:"South Dakota",  a:"SD",h:[0,6], m:"South Dakota — S…D"},
+  {n:"Tennessee",     a:"TN",h:[0,2], m:"TeNnessee — T…N"},
+  {n:"Texas",         a:"TX",h:[0,2], m:"TeXas — T…X"},
+  {n:"Utah",          a:"UT",h:[0,1], m:"UTah starts UT"},
+  {n:"Vermont",       a:"VT",h:[0,6], m:"VermonT — V…T"},
+  {n:"Virginia",      a:"VA",h:[0,7], m:"VirginIA — V…A"},
+  {n:"Washington",    a:"WA",h:[0,1], m:"WAshington state"},
+  {n:"West Virginia", a:"WV",h:[0,5], m:"West Virginia — W…V"},
+  {n:"Wisconsin",     a:"WI",h:[0,1], m:"WIsconsin cheese"},
+  {n:"Wyoming",       a:"WY",h:[0,1], m:"WYoming cowboys"},
+];
+
+/* ═══ UTILITIES ═══ */
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a}
+
+/* ═══ LEARN MODE ═══ */
+const display    = document.getElementById('display');
+const counter    = document.getElementById('counter');
+const stateLabel = document.getElementById('state-label');
+const mnemonicEl = document.getElementById('mnemonic');
+const strip      = document.getElementById('state-strip');
+const playBtn    = document.getElementById('play-btn');
+const speedRange = document.getElementById('speed-range');
+const speedLabel = document.getElementById('speed-label');
+
+let animToken  = 0;
+let currentIdx = 0;
+let playing    = true;
+let visited    = new Set();
+const speeds   = [.5, 1, 1.5, 2, 3];
+let speed      = 1;
+
+// Build strip
+const stripEls = [];
+S.forEach((st, i) => {
+  const el = document.createElement('div');
+  el.className = 'si';
+  el.textContent = st.a;
+  el.title = st.n;
+  el.addEventListener('click', () => startFrom(i));
+  strip.appendChild(el);
+  stripEls.push(el);
+});
+
+function updateStrip() {
+  stripEls.forEach((el, i) => {
+    el.classList.toggle('current', i === currentIdx);
+    el.classList.toggle('visited', visited.has(i) && i !== currentIdx);
+  });
+  counter.textContent = `${currentIdx + 1} / ${S.length}`;
+}
+
+speedRange.addEventListener('input', () => {
+  speed = speeds[speedRange.value - 1];
+  speedLabel.textContent = speed + 'x';
+});
+speedLabel.textContent = speed + 'x';
+
+/* ── Animation engine ── */
+async function animateState(idx, token) {
+  const alive = () => animToken === token;
+  const st = S[idx];
+  currentIdx = idx;
+  visited.add(idx);
+  updateStrip();
+
+  // Reset stage
+  display.innerHTML = '';
+  display.style.transform = '';
+  display.style.opacity = '1';
+  stateLabel.classList.remove('visible');
+  stateLabel.textContent = '';
+  mnemonicEl.classList.remove('visible');
+  mnemonicEl.textContent = '';
+
+  // Create letter spans
+  const spans = [];
+  for (let i = 0; i < st.n.length; i++) {
+    const span = document.createElement('span');
+    span.className = 'letter';
+    if (st.h.includes(i)) span.dataset.hl = '1';
+    span.textContent = st.n[i];
+    display.appendChild(span);
+    spans.push(span);
+  }
+
+  // Phase 1 — Type in, letter by letter
+  for (const span of spans) {
+    if (!alive()) return;
+    span.classList.add('visible');
+    await sleep(55 / speed);
+  }
+
+  await sleep(500 / speed);
+  if (!alive()) return;
+
+  // Phase 2 — Dim non-abbreviation letters, then highlight abbreviation letters
+  spans.forEach(s => {
+    if (!s.dataset.hl) s.classList.add('dim');
+  });
+
+  await sleep(250 / speed);
+  if (!alive()) return;
+
+  spans.forEach(s => {
+    if (s.dataset.hl) s.classList.add('glow');
+  });
+
+  await sleep(750 / speed);
+  if (!alive()) return;
+
+  // Phase 3 — Collapse non-hl letters
+  spans.forEach(s => {
+    if (!s.dataset.hl) {
+      s.style.width = s.offsetWidth + 'px';
+      void s.offsetHeight;
+    }
+  });
+  requestAnimationFrame(() => {
+    spans.forEach(s => {
+      if (!s.dataset.hl) s.classList.add('collapsing');
+    });
+  });
+
+  await sleep(300 / speed);
+  if (!alive()) return;
+
+  // Phase 4 — Zoom display (only 2 visible letters remain)
+  display.style.transform = 'scale(1.6)';
+
+  await sleep(350 / speed);
+  if (!alive()) return;
+
+  // Show label + mnemonic
+  stateLabel.textContent = st.n;
+  stateLabel.classList.add('visible');
+  mnemonicEl.textContent = st.m;
+  mnemonicEl.classList.add('visible');
+
+  await sleep(1300 / speed);
+  if (!alive()) return;
+
+  // Phase 5 — Fade out
+  display.style.opacity = '0';
+  stateLabel.classList.remove('visible');
+  mnemonicEl.classList.remove('visible');
+
+  await sleep(350 / speed);
+  if (!alive()) return;
+
+  // Reset for next
+  display.style.opacity = '1';
+  display.style.transform = '';
+}
+
+async function playFrom(idx) {
+  const token = ++animToken;
+  for (let i = idx; i < S.length; i++) {
+    if (animToken !== token || !playing) return;
+    await animateState(i, token);
+    if (animToken !== token || !playing) return;
+    await sleep(200 / speed);
+  }
+}
+
+function startFrom(idx) {
+  ++animToken;
+  currentIdx = idx;
+  if (playing) {
+    playFrom(idx);
+  } else {
+    const token = ++animToken;
+    animateState(idx, token);
+  }
+}
+
+// Controls
+playBtn.addEventListener('click', () => {
+  playing = !playing;
+  playBtn.innerHTML = playing ? '&#9646;&#9646;' : '&#9654;';
+  if (playing) playFrom(currentIdx);
+  else ++animToken;
+});
+
+document.getElementById('prev-btn').addEventListener('click', () => {
+  if (currentIdx > 0) startFrom(currentIdx - 1);
+});
+
+document.getElementById('next-btn').addEventListener('click', () => {
+  if (currentIdx < S.length - 1) startFrom(currentIdx + 1);
+});
+
+// Keyboard
+document.addEventListener('keydown', e => {
+  if (document.getElementById('quiz-panel').classList.contains('active')) return;
+  if (e.code === 'Space') { e.preventDefault(); playBtn.click(); }
+  if (e.code === 'ArrowLeft') { e.preventDefault(); document.getElementById('prev-btn').click(); }
+  if (e.code === 'ArrowRight') { e.preventDefault(); document.getElementById('next-btn').click(); }
+});
+
+/* ═══ QUIZ MODE ═══ */
+let quizQ=[], quizIdx=0, qScore=0, streak=0, bestStreak=0, missed=[];
+let questionStart=0, timerInterval=null;
+
+const qBarEl   = document.getElementById('q-bar');
+const qScoreEl = document.getElementById('q-score');
+const qStreakEl = document.getElementById('q-streak');
+const qTimerEl = document.getElementById('q-timer');
+const qPromptEl= document.getElementById('q-prompt');
+const qStateEl = document.getElementById('q-state');
+const qOptsEl  = document.getElementById('q-opts');
+const qDoneEl  = document.getElementById('q-done');
+const qFinalEl = document.getElementById('q-final');
+const qGradeEl = document.getElementById('q-grade');
+const qMissedEl= document.getElementById('q-missed');
+const streakFlame = document.getElementById('streak-flame');
+const streakNumEl = document.getElementById('streak-num');
+const dottieEl = document.getElementById('dottie');
+
+function startQuiz() {
+  quizQ = shuffle([...S]).map((st, i) => ({...st, reverse: i % 3 === 0}));
+  quizIdx = 0; qScore = 0; streak = 0; bestStreak = 0; missed = [];
+  qDoneEl.style.display = 'none';
+  qOptsEl.style.display = 'grid';
+  qPromptEl.style.display = 'block';
+  qStateEl.style.display = 'block';
+  updateQuizStreak();
+  showQuestion();
+  clearInterval(timerInterval);
+  timerInterval = setInterval(tickTimer, 250);
+}
+
+function tickTimer() {
+  const elapsed = Math.floor((Date.now() - questionStart) / 1000);
+  const m = Math.floor(elapsed / 60);
+  const s = String(elapsed % 60).padStart(2, '0');
+  qTimerEl.textContent = `${m}:${s}`;
+  qTimerEl.classList.toggle('warn', elapsed >= 50);
+
+  if (elapsed >= 60 && !dottieEl.dataset.shown) {
+    dottieEl.dataset.shown = '1';
+    dottieEl.classList.add('show');
+    setTimeout(() => dottieEl.classList.remove('show'), 2000);
+  }
+}
+
+function showQuestion() {
+  if (quizIdx >= quizQ.length) return endQuiz();
+  const q = quizQ[quizIdx];
+  questionStart = Date.now();
+  delete dottieEl.dataset.shown;
+
+  qBarEl.style.width = ((quizIdx / quizQ.length) * 100) + '%';
+  qScoreEl.textContent = qScore;
+
+  if (q.reverse) {
+    qPromptEl.textContent = 'Which state has the abbreviation:';
+    qStateEl.textContent = q.a;
+    qStateEl.classList.add('reverse');
+  } else {
+    qPromptEl.textContent = 'What is the abbreviation for:';
+    qStateEl.textContent = q.n;
+    qStateEl.classList.remove('reverse');
+  }
+
+  const correct = q.reverse ? q.n : q.a;
+  const pool = S.filter(x => x.a !== q.a);
+  shuffle(pool);
+  const opts = shuffle([correct, ...pool.slice(0,3).map(x => q.reverse ? x.n : x.a)]);
+
+  qOptsEl.innerHTML = '';
+  opts.forEach(opt => {
+    const btn = document.createElement('button');
+    btn.className = 'quiz-opt';
+    btn.textContent = opt;
+    btn.addEventListener('click', () => answer(btn, opt, correct, q));
+    qOptsEl.appendChild(btn);
+  });
+}
+
+function answer(btn, chosen, correct, q) {
+  qOptsEl.querySelectorAll('.quiz-opt').forEach(b => b.style.pointerEvents = 'none');
+  if (chosen === correct) {
+    btn.classList.add('correct');
+    qScore++;
+    streak++;
+    if (streak > bestStreak) bestStreak = streak;
+  } else {
+    btn.classList.add('wrong');
+    streak = 0;
+    missed.push(q);
+    qOptsEl.querySelectorAll('.quiz-opt').forEach(b => {
+      if (b.textContent === correct) b.classList.add('correct');
+    });
+  }
+  updateQuizStreak();
+  setTimeout(() => { quizIdx++; showQuestion(); }, 850);
+}
+
+function updateQuizStreak() {
+  qStreakEl.textContent = streak;
+  streakNumEl.textContent = streak;
+  streakFlame.classList.toggle('on', streak >= 3);
+}
+
+function endQuiz() {
+  clearInterval(timerInterval);
+  qBarEl.style.width = '100%';
+  qOptsEl.style.display = 'none';
+  qPromptEl.style.display = 'none';
+  qStateEl.style.display = 'none';
+  qTimerEl.textContent = '';
+  streakFlame.classList.remove('on');
+
+  qFinalEl.textContent = qScore;
+  let g = '';
+  if (qScore === 50)     g = 'PERFECT! You are a geography genius!';
+  else if (qScore >= 45) g = 'Excellent! Almost perfect!';
+  else if (qScore >= 40) g = 'Great job!';
+  else if (qScore >= 30) g = 'Good effort — keep studying!';
+  else if (qScore >= 20) g = 'Getting there...';
+  else                   g = 'Time to review the Learn tab!';
+  if (bestStreak >= 10) g += ` Best streak: ${bestStreak}`;
+  qGradeEl.textContent = g;
+
+  if (missed.length) {
+    qMissedEl.innerHTML = `<h3>Review these ${missed.length} states:</h3>` +
+      missed.map(q => `<div class="missed-item"><span class="ms">${q.n}</span><span class="ma">${q.a}</span></div>`).join('');
+  } else {
+    qMissedEl.innerHTML = '';
+  }
+  qDoneEl.style.display = 'block';
+}
+
+document.getElementById('retry-btn').addEventListener('click', startQuiz);
+
+/* ═══ TAB SWITCHING ═══ */
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    const mode = tab.dataset.mode;
+    document.getElementById('learn-panel').classList.toggle('active', mode === 'learn');
+    document.getElementById('quiz-panel').classList.toggle('active', mode === 'quiz');
+    if (mode === 'quiz') {
+      ++animToken; playing = false;
+      playBtn.innerHTML = '&#9654;';
+      startQuiz();
+    }
+    if (mode === 'learn') {
+      clearInterval(timerInterval);
+      streakFlame.classList.remove('on');
+    }
+  });
+});
+
+/* ═══ INIT ═══ */
+updateStrip();
+playFrom(0);
+</script>
+</body>
+</html>

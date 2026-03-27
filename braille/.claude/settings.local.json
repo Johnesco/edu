@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/code/edu//**)",
+      "Read(//c/code//**)",
+      "Bash(ls:*)",
+      "Bash(start:*)"
+    ]
+  }
+}
